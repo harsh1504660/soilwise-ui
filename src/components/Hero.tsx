@@ -1,5 +1,6 @@
 
 import { ArrowRight } from 'lucide-react';
+import Map from './Map';
 
 const Hero = () => {
   return (
@@ -24,12 +25,7 @@ const Hero = () => {
             </div>
           </div>
           <div className="relative animate-float">
-            <img
-              src="/placeholder.svg"
-              alt="Agricultural Analytics"
-              className="w-full rounded-2xl shadow-2xl"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-primary/10 to-transparent rounded-2xl" />
+            <Map />
           </div>
         </div>
       </div>

@@ -1,10 +1,12 @@
 
 import { useState, useEffect } from 'react';
 import { Menu, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -25,7 +27,10 @@ const Navbar = () => {
             <a href="#features" className="text-secondary-dark hover:text-primary transition-colors">Features</a>
             <a href="#about" className="text-secondary-dark hover:text-primary transition-colors">About</a>
             <a href="#contact" className="text-secondary-dark hover:text-primary transition-colors">Contact</a>
-            <button className="bg-primary text-white px-6 py-2 rounded-full hover:bg-primary-dark transition-colors">
+            <button 
+              onClick={() => navigate('/fields')}
+              className="bg-primary text-white px-6 py-2 rounded-full hover:bg-primary-dark transition-colors"
+            >
               Get Started
             </button>
           </div>
@@ -46,7 +51,13 @@ const Navbar = () => {
               <a href="#features" className="block text-secondary-dark hover:text-primary transition-colors">Features</a>
               <a href="#about" className="block text-secondary-dark hover:text-primary transition-colors">About</a>
               <a href="#contact" className="block text-secondary-dark hover:text-primary transition-colors">Contact</a>
-              <button className="w-full bg-primary text-white px-6 py-2 rounded-full hover:bg-primary-dark transition-colors">
+              <button 
+                onClick={() => {
+                  navigate('/fields');
+                  setIsMobileMenuOpen(false);
+                }}
+                className="w-full bg-primary text-white px-6 py-2 rounded-full hover:bg-primary-dark transition-colors"
+              >
                 Get Started
               </button>
             </div>

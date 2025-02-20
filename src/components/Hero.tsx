@@ -1,7 +1,6 @@
 
 import { ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import Map from './Map';
 
 const Hero = () => {
   const navigate = useNavigate();
@@ -31,7 +30,11 @@ const Hero = () => {
             </div>
           </div>
           <div className="h-[500px] relative animate-float">
-            <Map />
+            <img 
+              src="/satellite-view.jpg" 
+              alt="Satellite view of agricultural fields"
+              className="w-full h-full object-cover rounded-2xl shadow-2xl"
+            />
           </div>
         </div>
       </div>

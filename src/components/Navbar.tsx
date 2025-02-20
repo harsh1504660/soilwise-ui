@@ -18,7 +18,7 @@ const Navbar = () => {
     <nav className={`fixed w-full z-50 transition-all duration-300 ${isScrolled ? 'bg-white/90 backdrop-blur-md shadow-sm' : 'bg-transparent'}`}>
       <div className="container mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
-          <div className="text-2xl font-bold text-primary">SoilWise</div>
+          <div className="text-2xl font-bold text-primary">Agri-Spectra</div>
           
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center space-x-8">

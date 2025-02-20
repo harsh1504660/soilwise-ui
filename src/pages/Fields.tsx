@@ -1,11 +1,17 @@
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Menu, Plus, Layers, Settings } from 'lucide-react';
 import Map from '../components/Map';
 
 const Fields = () => {
+  const mapRef = useRef<{ startDrawing: () => void } | null>(null);
+
+  const handleAddField = () => {
+    mapRef.current?.startDrawing();
+  };
+
   return (
     <div className="h-screen w-full flex">
       {/* Top Navigation */}
@@ -35,7 +41,7 @@ const Fields = () => {
           </Sheet>
           <h1 className="text-xl font-semibold">Fields</h1>
         </div>
-        <Button className="gap-2">
+        <Button className="gap-2" onClick={handleAddField}>
           <Plus className="h-4 w-4" />
           Add Field
         </Button>
@@ -43,7 +49,7 @@ const Fields = () => {
 
       {/* Main Content */}
       <div className="flex-1 pt-14">
-        <Map />
+        <Map ref={mapRef} />
       </div>
     </div>
   );

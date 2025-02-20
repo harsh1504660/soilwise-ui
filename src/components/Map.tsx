@@ -1,15 +1,23 @@
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import mapboxgl from 'mapbox-gl';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import * as turf from '@turf/turf';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
-const Map = () => {
+const Map = forwardRef((props, ref) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const draw = useRef<any>(null);
+
+  useImperativeHandle(ref, () => ({
+    startDrawing: () => {
+      if (draw.current) {
+        draw.current.changeMode('draw_polygon');
+      }
+    }
+  }));
 
   useEffect(() => {
     if (!mapContainer.current) return;
@@ -64,6 +72,8 @@ const Map = () => {
       <div ref={mapContainer} className="absolute inset-0" />
     </div>
   );
-};
+});
+
+Map.displayName = 'Map';
 
 export default Map;

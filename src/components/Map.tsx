@@ -20,30 +20,22 @@ const Map = () => {
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
         style: 'mapbox://styles/mapbox/satellite-v9',
-        center: [30, 15],
-        zoom: 2,
-        pitch: 45,
-        projection: 'globe'
+        center: [73.7586, 18.6550], // Coordinates from the example URL
+        zoom: 19,
+        pitch: 0,
       });
 
       // Add navigation controls
       map.current.addControl(
-        new mapboxgl.NavigationControl({
-          visualizePitch: true,
-        })
+        new mapboxgl.NavigationControl(),
+        'top-right'
       );
 
-      // Add atmosphere and fog effects
-      map.current.on('style.load', () => {
-        map.current?.setFog({
-          color: 'rgb(255, 255, 255)',
-          'high-color': 'rgb(200, 200, 225)',
-          'horizon-blend': 0.2,
-        });
-      });
-
-      // Disable scroll zoom for smoother experience
-      map.current.scrollZoom.disable();
+      // Add scale control
+      map.current.addControl(
+        new mapboxgl.ScaleControl(),
+        'bottom-right'
+      );
     };
 
     // Prompt for Mapbox token if not available
@@ -66,9 +58,8 @@ const Map = () => {
   }, [mapboxToken]);
 
   return (
-    <div className="relative w-full h-[500px] rounded-2xl overflow-hidden shadow-2xl">
+    <div className="relative w-full h-full">
       <div ref={mapContainer} className="absolute inset-0" />
-      <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-primary/10 to-transparent" />
     </div>
   );
 };

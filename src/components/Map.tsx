@@ -6,6 +6,7 @@ import * as turf from '@turf/turf';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Field } from '../types/field';
+import { toast } from "sonner";
 
 interface MapProps {
   onFieldCreated?: (field: Omit<Field, 'id' | 'created_at'>) => void;
@@ -59,13 +60,26 @@ const Map = forwardRef<{ startDrawing: () => void }, MapProps>((props, ref) => {
     map.current.on('draw.update', handleDrawUpdate);
 
     // Load existing fields if any
-    if (props.fields) {
-      map.current.on('load', () => {
-        props.fields?.forEach(field => {
+    map.current.on('load', () => {
+      if (props.fields && props.fields.length > 0) {
+        props.fields.forEach(field => {
           draw.current.add(field.polygon);
+          // Add popup with field info
+          const center = turf.center(field.polygon);
+          const popup = new mapboxgl.Popup({ closeButton: false })
+            .setLngLat(center.geometry.coordinates)
+            .setHTML(`
+              <div class="p-2">
+                <h3 class="font-bold">${field.name}</h3>
+                <p>Area: ${field.area.toFixed(2)} m²</p>
+                ${field.ndvi ? `<p>NDVI: ${field.ndvi.toFixed(2)}</p>` : ''}
+              </div>
+            `);
+          popup.addTo(map.current!);
         });
-      });
-    }
+        toast.success(`Loaded ${props.fields.length} fields`);
+      }
+    });
 
     return () => {
       if (map.current) {
@@ -85,19 +99,21 @@ const Map = forwardRef<{ startDrawing: () => void }, MapProps>((props, ref) => {
         name: `Field ${new Date().toISOString().slice(0, 10)}`,
         area: rounded,
         polygon: feature,
+        ndvi: Math.random() * (0.9 - 0.1) + 0.1, // This is a placeholder NDVI value
       });
+      toast.success('Field created successfully');
     }
   };
 
   const handleDrawDelete = (e: any) => {
-    console.log('Field deleted:', e.features);
+    toast.info('Field deleted');
   };
 
   const handleDrawUpdate = (e: any) => {
     const feature = e.features[0];
     const area = turf.area(feature);
     const rounded = Math.round(area * 100) / 100;
-    console.log('Field updated:', rounded, 'square meters');
+    toast.info(`Field updated: ${rounded} m²`);
   };
 
   return (

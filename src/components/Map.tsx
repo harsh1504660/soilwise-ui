@@ -28,7 +28,7 @@ const Map = forwardRef<{ startDrawing: () => void }, MapProps>((props, ref) => {
   useEffect(() => {
     if (!mapContainer.current) return;
     
-    mapboxgl.accessToken = 'pk.eyJ1IjoiZXhhbXBsZSIsImEiOiJjbHNlbmRtZXNzYWdlc3RvcmVwbGFjZXRoaXN3aXRoeW91cnRva2Vu';
+    mapboxgl.accessToken = 'pk.eyJ1IjoiaGFyc2gxNTA0IiwiYSI6ImNtNzV5aDBnczBzZHcycXIyYXBuMHBoaGQifQ.xKFWa2vCyHofljEE1NLRQA';
     
     map.current = new mapboxgl.Map({
       container: mapContainer.current,

@@ -5,8 +5,14 @@ import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import * as turf from '@turf/turf';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import { Field } from '../types/field';
 
-const Map = forwardRef((props, ref) => {
+interface MapProps {
+  onFieldCreated?: (field: Omit<Field, 'id' | 'created_at'>) => void;
+  fields?: Field[];
+}
+
+const Map = forwardRef<{ startDrawing: () => void }, MapProps>((props, ref) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const draw = useRef<any>(null);
@@ -48,15 +54,17 @@ const Map = forwardRef((props, ref) => {
     map.current.addControl(new mapboxgl.ScaleControl(), 'bottom-right');
 
     // Handle draw events
-    map.current.on('draw.create', updateArea);
-    map.current.on('draw.delete', updateArea);
-    map.current.on('draw.update', updateArea);
+    map.current.on('draw.create', handleDrawCreate);
+    map.current.on('draw.delete', handleDrawDelete);
+    map.current.on('draw.update', handleDrawUpdate);
 
-    function updateArea(e: any) {
-      const data = draw.current.getAll();
-      const area = turf.area(data);
-      const rounded = Math.round(area * 100) / 100;
-      console.log('Area:', rounded, 'square meters');
+    // Load existing fields if any
+    if (props.fields) {
+      map.current.on('load', () => {
+        props.fields?.forEach(field => {
+          draw.current.add(field.polygon);
+        });
+      });
     }
 
     return () => {
@@ -65,7 +73,32 @@ const Map = forwardRef((props, ref) => {
         map.current = null;
       }
     };
-  }, []);
+  }, [props.fields]);
+
+  const handleDrawCreate = (e: any) => {
+    const feature = e.features[0];
+    const area = turf.area(feature);
+    const rounded = Math.round(area * 100) / 100;
+
+    if (props.onFieldCreated) {
+      props.onFieldCreated({
+        name: `Field ${new Date().toISOString().slice(0, 10)}`,
+        area: rounded,
+        polygon: feature,
+      });
+    }
+  };
+
+  const handleDrawDelete = (e: any) => {
+    console.log('Field deleted:', e.features);
+  };
+
+  const handleDrawUpdate = (e: any) => {
+    const feature = e.features[0];
+    const area = turf.area(feature);
+    const rounded = Math.round(area * 100) / 100;
+    console.log('Field updated:', rounded, 'square meters');
+  };
 
   return (
     <div className="relative w-full h-full">

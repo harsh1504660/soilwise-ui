@@ -1,15 +1,57 @@
 
-import React, { useRef } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Menu, Plus, Layers, Settings } from 'lucide-react';
 import Map from '../components/Map';
+import { Field } from '../types/field';
+import { supabase } from '../lib/supabaseClient';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 const Fields = () => {
   const mapRef = useRef<{ startDrawing: () => void } | null>(null);
+  const queryClient = useQueryClient();
+
+  // Fetch fields
+  const { data: fields, isLoading } = useQuery({
+    queryKey: ['fields'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('fields')
+        .select('*');
+      
+      if (error) throw error;
+      return data as Field[];
+    }
+  });
+
+  // Create field mutation
+  const createField = useMutation({
+    mutationFn: async (newField: Omit<Field, 'id' | 'created_at'>) => {
+      const { data, error } = await supabase
+        .from('fields')
+        .insert([newField])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['fields'] });
+    }
+  });
 
   const handleAddField = () => {
     mapRef.current?.startDrawing();
+  };
+
+  const handleFieldCreated = async (field: Omit<Field, 'id' | 'created_at'>) => {
+    try {
+      await createField.mutateAsync(field);
+    } catch (error) {
+      console.error('Error creating field:', error);
+    }
   };
 
   return (
@@ -49,7 +91,11 @@ const Fields = () => {
 
       {/* Main Content */}
       <div className="flex-1 pt-14">
-        <Map ref={mapRef} />
+        <Map 
+          ref={mapRef} 
+          onFieldCreated={handleFieldCreated}
+          fields={fields}
+        />
       </div>
     </div>
   );

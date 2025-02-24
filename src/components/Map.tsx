@@ -66,8 +66,9 @@ const Map = forwardRef<{ startDrawing: () => void }, MapProps>((props, ref) => {
           draw.current.add(field.polygon);
           // Add popup with field info
           const center = turf.center(field.polygon);
+          const coordinates = center.geometry.coordinates as [number, number];
           const popup = new mapboxgl.Popup({ closeButton: false })
-            .setLngLat(center.geometry.coordinates)
+            .setLngLat(coordinates)
             .setHTML(`
               <div class="p-2">
                 <h3 class="font-bold">${field.name}</h3>

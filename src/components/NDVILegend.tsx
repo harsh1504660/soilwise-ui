@@ -14,10 +14,14 @@ const NDVILegend = () => {
         <span>1.0</span>
       </div>
       <div className="text-xs mt-2 text-gray-600">
-        <p>&lt;0.2: Soil/Non-vegetation</p>
+        <p>&lt;0.2: Bare soil/Non-vegetation</p>
         <p>0.2-0.4: Sparse vegetation</p>
         <p>0.4-0.6: Moderate vegetation</p>
-        <p>&gt;0.6: Dense vegetation</p>
+        <p>&gt;0.6: Dense, healthy vegetation</p>
+      </div>
+      <div className="text-xs mt-1 pt-1 border-t border-gray-200">
+        <p className="font-semibold">Real NDVI Calculation</p>
+        <p>Based on NIR and RED reflectance</p>
       </div>
     </div>
   );

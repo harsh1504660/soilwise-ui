@@ -7,16 +7,11 @@ import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Field } from '../types/field';
 import { toast } from "sonner";
+import { calculateRealNDVI } from '../services/ndviService';
 
 interface MapProps {
   onFieldCreated?: (field: Omit<Field, 'id' | 'created_at'>) => void;
   fields?: Field[];
-}
-
-interface NDVIData {
-  min: number;
-  max: number;
-  mean: number;
 }
 
 const Map = forwardRef<{ startDrawing: () => void }, MapProps>((props, ref) => {
@@ -34,48 +29,16 @@ const Map = forwardRef<{ startDrawing: () => void }, MapProps>((props, ref) => {
   }));
 
   // Function to calculate NDVI based on location and polygon
-  const calculateNDVI = async (polygon: GeoJSON.Feature): Promise<NDVIData> => {
+  const calculateNDVI = async (polygon: GeoJSON.Feature): Promise<{min: number, max: number, mean: number}> => {
     setIsLoading(true);
     
-    // In a real implementation, this would make a request to a GEE backend
-    // For now, we'll simulate with a more realistic approach based on the polygon properties
     try {
-      // Get the center of the polygon for simulation
-      const center = turf.center(polygon);
-      const [lng, lat] = center.geometry.coordinates;
-      
-      // Simulate NDVI calculation based on location
-      // Areas closer to equator tend to have higher NDVI values
-      const latFactor = 1 - Math.abs(lat) / 90; // Higher at equator
-      
-      // Randomize within a realistic range for agricultural fields
-      // NDVI values typically range from -1 to 1, with healthy vegetation being 0.2 to 0.8
-      const baseMean = 0.3 + (latFactor * 0.5); // Base NDVI increases closer to equator
-      
-      // Calculate area in hectares for size-based adjustments
-      const areaHectares = turf.area(polygon) / 10000;
-      
-      // Small random adjustment for realistic variation
-      const randomFactor = Math.random() * 0.2 - 0.1;
-      
-      // Size-based adjustment (larger fields might have more variation)
-      const sizeAdjustment = Math.min(0.1, areaHectares / 100);
-      
-      // Calculate the final NDVI values
-      const meanNDVI = Math.min(0.9, Math.max(0.1, baseMean + randomFactor));
-      const minNDVI = Math.max(0, meanNDVI - sizeAdjustment - (Math.random() * 0.2));
-      const maxNDVI = Math.min(1, meanNDVI + sizeAdjustment + (Math.random() * 0.2));
-      
-      // Wait to simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      return {
-        min: parseFloat(minNDVI.toFixed(2)),
-        max: parseFloat(maxNDVI.toFixed(2)),
-        mean: parseFloat(meanNDVI.toFixed(2))
-      };
+      // Use the real NDVI calculation service
+      const ndviData = await calculateRealNDVI(polygon);
+      return ndviData;
     } catch (error) {
       console.error("Error calculating NDVI:", error);
+      toast.error("Error calculating NDVI. Using default values.");
       return { min: 0.1, max: 0.5, mean: 0.3 };
     } finally {
       setIsLoading(false);
@@ -156,7 +119,7 @@ const Map = forwardRef<{ startDrawing: () => void }, MapProps>((props, ref) => {
     const area = turf.area(feature);
     const rounded = Math.round(area * 100) / 100;
 
-    toast.info('Calculating NDVI values...');
+    toast.info('Calculating real NDVI values...');
     
     try {
       // Calculate NDVI for the created field
@@ -171,7 +134,7 @@ const Map = forwardRef<{ startDrawing: () => void }, MapProps>((props, ref) => {
           ndvi_min: ndviData.min,
           ndvi_max: ndviData.max,
         });
-        toast.success('Field created with NDVI data');
+        toast.success('Field created with real NDVI data');
       }
     } catch (error) {
       console.error("Error in field creation:", error);
@@ -197,7 +160,7 @@ const Map = forwardRef<{ startDrawing: () => void }, MapProps>((props, ref) => {
     const area = turf.area(feature);
     const rounded = Math.round(area * 100) / 100;
     
-    toast.info('Recalculating NDVI for updated field...');
+    toast.info('Recalculating real NDVI for updated field...');
     
     try {
       const ndviData = await calculateNDVI(feature);
@@ -214,7 +177,7 @@ const Map = forwardRef<{ startDrawing: () => void }, MapProps>((props, ref) => {
         <div className="absolute top-4 right-4 bg-white p-2 rounded shadow">
           <div className="flex items-center">
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-700 mr-2"></div>
-            <span>Calculating NDVI...</span>
+            <span>Calculating real NDVI...</span>
           </div>
         </div>
       )}

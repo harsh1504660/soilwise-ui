@@ -4,6 +4,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Menu, Plus, Layers, Settings } from 'lucide-react';
 import Map from '../components/Map';
+import NDVILegend from '../components/NDVILegend';
 import { Field } from '../types/field';
 import { supabase } from '../lib/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -96,6 +97,7 @@ const Fields = () => {
           onFieldCreated={handleFieldCreated}
           fields={fields}
         />
+        <NDVILegend />
       </div>
     </div>
   );

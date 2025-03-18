@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import mapboxgl from 'mapbox-gl';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
@@ -11,8 +10,6 @@ import { Field } from '../types/field';
 import { toast } from "sonner";
 import { saveFieldData } from '@/lib/supabaseClient';
 import { fetchRemoteSensingData } from '@/services/remoteSensingService';
-import NDVILegend from './NDVILegend';
-import SoilMoistureLegend from './SoilMoistureLegend';
 
 interface MapProps {
   onFieldCreated?: (field: Omit<Field, 'id' | 'created_at' | 'lastUpdated'>) => void;
@@ -454,8 +451,6 @@ const Map = forwardRef<{ startDrawing: () => void }, MapProps>((props, ref) => {
   return (
     <div className="relative w-full h-full">
       <div ref={mapContainer} className="absolute inset-0" />
-      {displayMode === 'ndvi' && <NDVILegend />}
-      {displayMode === 'soil' && <SoilMoistureLegend />}
       {!map.current && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
           <p className="text-gray-500">Loading map...</p>

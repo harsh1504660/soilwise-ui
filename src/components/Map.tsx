@@ -9,6 +9,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { Field } from '../types/field';
 import { toast } from "sonner";
 import { saveFieldData } from '@/lib/supabaseClient';
+import { fetchRemoteSensingData } from '@/services/remoteSensingService';
 
 interface MapProps {
   onFieldCreated?: (field: Omit<Field, 'id' | 'created_at' | 'lastUpdated'>) => void;
@@ -47,13 +48,13 @@ const Map = forwardRef<{ startDrawing: () => void }, MapProps>((props, ref) => {
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/satellite-v9',
       center: [73.7586, 18.6550],
-      zoom: 13, // Start with a lower zoom to show more context
+      zoom: 13,
       pitch: 0,
     });
 
     const geocoder = new MapboxGeocoder({
       accessToken: mapboxgl.accessToken,
-      mapboxgl: mapboxgl as any, // Fix for the TypeScript error
+      mapboxgl: mapboxgl as any,
       marker: false,
       placeholder: 'Search for a location',
       zoom: 14
@@ -246,22 +247,39 @@ const Map = forwardRef<{ startDrawing: () => void }, MapProps>((props, ref) => {
     }
   };
 
-  const handleDrawCreate = (e: any) => {
+  const handleDrawCreate = async (e: any) => {
     try {
       console.log('Draw create event:', e);
       const feature = e.features[0];
       const area = turf.area(feature);
       const rounded = Math.round(area * 100) / 100;
 
+      toast.loading('Fetching real NDVI and soil moisture data...');
+
+      const coordinates = feature.geometry.coordinates[0].map((coord: number[]) => [coord[0], coord[1]]);
+      
+      let ndvi = Math.random() * (0.9 - 0.1) + 0.1;
+      let soilMoisture = Math.random() * 40 + 10;
+      
+      const remoteSensingData = await fetchRemoteSensingData(coordinates);
+      
+      if (remoteSensingData) {
+        ndvi = remoteSensingData.ndvi;
+        soilMoisture = remoteSensingData.soil_moisture;
+        toast.success('Received real NDVI and soil moisture data');
+      } else {
+        toast.error('Using simulated data as fallback');
+      }
+
       if (props.onFieldCreated) {
         const newField = {
           name: `Field ${new Date().toISOString().slice(0, 10)}`,
           area: rounded,
           polygon: feature,
-          ndvi: Math.random() * (0.9 - 0.1) + 0.1,
-          soilMoisture: Math.random() * 40 + 10,
+          ndvi: ndvi,
+          soilMoisture: soilMoisture,
         };
-        console.log('Creating new field:', newField);
+        console.log('Creating new field with real data:', newField);
         props.onFieldCreated(newField);
       }
     } catch (error) {
@@ -274,21 +292,43 @@ const Map = forwardRef<{ startDrawing: () => void }, MapProps>((props, ref) => {
     toast.info('Field deleted from map');
   };
 
-  const handleDrawUpdate = (e: any) => {
+  const handleDrawUpdate = async (e: any) => {
     try {
       const feature = e.features[0];
       const area = turf.area(feature);
       const rounded = Math.round(area * 100) / 100;
       
+      toast.loading('Updating NDVI and soil moisture data...');
+      
+      const coordinates = feature.geometry.coordinates[0].map((coord: number[]) => [coord[0], coord[1]]);
+      
+      let ndvi;
+      let soilMoisture;
+      
+      const remoteSensingData = await fetchRemoteSensingData(coordinates);
+      
+      if (remoteSensingData) {
+        ndvi = remoteSensingData.ndvi;
+        soilMoisture = remoteSensingData.soil_moisture;
+        toast.success('Updated with real NDVI and soil moisture data');
+      } else {
+        toast.error('Field updated but unable to fetch new remote sensing data');
+      }
+      
       const fieldId = feature.id;
       if (props.onFieldUpdated && props.fields) {
         const field = props.fields.find(f => f.polygon.id === fieldId);
         if (field) {
-          props.onFieldUpdated(field.id, {
+          const updates: Partial<Field> = {
             area: rounded,
             polygon: feature,
             lastUpdated: new Date().toISOString()
-          });
+          };
+          
+          if (ndvi !== undefined) updates.ndvi = ndvi;
+          if (soilMoisture !== undefined) updates.soilMoisture = soilMoisture;
+          
+          props.onFieldUpdated(field.id, updates);
           toast.info(`Field updated: ${rounded} m²`);
         }
       } else {

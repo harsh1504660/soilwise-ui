@@ -5,7 +5,7 @@
 
 import { toast } from "sonner";
 
-const API_URL = "https://remote-sensing-app.onrender.com/get_ndvi_soil_moisture/";
+const API_URL = "https://ndvi-api-80ia.onrender.com/get_ndvi_soil_moisture";
 
 /**
  * Fetches NDVI and soil moisture data for a given polygon

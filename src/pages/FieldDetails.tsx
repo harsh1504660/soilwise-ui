@@ -1,4 +1,3 @@
-
 import "mapbox-gl/dist/mapbox-gl.css";
 
 import React, { useEffect, useState } from 'react';
@@ -14,6 +13,7 @@ import { toast } from "sonner";
 import { saveFieldData, fetchWeatherData } from '@/lib/supabaseClient';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import Map from '@/components/Map';
+import * as turf from '@turf/turf';
 
 const FieldDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -22,7 +22,6 @@ const FieldDetails = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('ndvi');
 
-  // Load field data effect
   useEffect(() => {
     const loadFieldData = async () => {
       try {
@@ -31,7 +30,6 @@ const FieldDetails = () => {
         if (storedField) {
           const parsedField = JSON.parse(storedField) as Field;
           if (parsedField.id === id) {
-            // Ensure we have historical data for charts
             if (!parsedField.ndviHistory || parsedField.ndviHistory.length === 0) {
               parsedField.ndviHistory = generateHistoricalData(parsedField, 'ndvi');
             }
@@ -40,7 +38,6 @@ const FieldDetails = () => {
             }
             
             setField(parsedField);
-            // Save the updated field with historical data
             await saveFieldData(parsedField);
           }
         }
@@ -55,7 +52,6 @@ const FieldDetails = () => {
     loadFieldData();
   }, [id]);
 
-  // Function to refresh weather data
   const refreshWeatherData = async () => {
     try {
       if (!field || !field.polygon) {
@@ -63,14 +59,11 @@ const FieldDetails = () => {
         return;
       }
       
-      // Get field center coordinates for weather API
       const center = turf.center(field.polygon);
       const [lng, lat] = center.geometry.coordinates;
       
-      // Fetch weather data
       const weatherData = await fetchWeatherData(lat, lng);
       
-      // Update field with new weather data
       const updatedField: Field = {
         ...field,
         weatherData,
@@ -79,7 +72,6 @@ const FieldDetails = () => {
       
       setField(updatedField);
       
-      // Save updated field
       await saveFieldData(updatedField);
       
       toast.success('Weather data updated');
@@ -90,7 +82,6 @@ const FieldDetails = () => {
     }
   };
 
-  // Auto-fetch weather data if not already present
   useEffect(() => {
     const autoFetchWeather = async () => {
       if (field && field.polygon && !field.weatherData && activeTab === 'weather') {
@@ -113,7 +104,6 @@ const FieldDetails = () => {
 
   return (
     <div className="container mx-auto p-4">
-      {/* Header Section */}
       <div className="mb-6 flex justify-between items-center">
         <h1 className="text-2xl font-bold">{field.name}</h1>
         <Button variant="outline" onClick={() => navigate('/fields')}>
@@ -121,7 +111,6 @@ const FieldDetails = () => {
         </Button>
       </div>
 
-      {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="ndvi">
@@ -135,7 +124,6 @@ const FieldDetails = () => {
           </TabsTrigger>
         </TabsList>
 
-        {/* NDVI Tab Content */}
         <TabsContent value="ndvi" className="space-y-4">
           <Card>
             <CardHeader>
@@ -143,7 +131,6 @@ const FieldDetails = () => {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* NDVI Stats */}
                 <div className="space-y-4">
                   <div className="p-4 bg-white rounded-lg shadow">
                     <h3 className="text-lg font-semibold mb-2">Current NDVI Value</h3>
@@ -168,7 +155,6 @@ const FieldDetails = () => {
                     </div>
                   </div>
 
-                  {/* NDVI History Chart */}
                   <div className="bg-white p-4 rounded-lg shadow">
                     <h3 className="text-lg font-semibold mb-4">NDVI History</h3>
                     <div className="h-64">
@@ -193,7 +179,6 @@ const FieldDetails = () => {
                   </div>
                 </div>
 
-                {/* NDVI Map using the Map component */}
                 <div className="space-y-4">
                   <div className="bg-white rounded-lg shadow overflow-hidden" style={{ height: "320px", width: "100%", position: "relative" }}>
                     <Map 
@@ -233,7 +218,6 @@ const FieldDetails = () => {
           </Card>
         </TabsContent>
 
-        {/* Weather Tab Content */}
         <TabsContent value="weather" className="space-y-4">
           <Card>
             <CardHeader>
@@ -252,11 +236,9 @@ const FieldDetails = () => {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Weather details */}
                 <div className="md:col-span-2">
                   {field.weatherData ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Temperature Card */}
                       <Card>
                         <CardContent className="p-4 text-center">
                           <Thermometer className="h-8 w-8 mx-auto mb-2 text-red-500" />
@@ -265,7 +247,6 @@ const FieldDetails = () => {
                         </CardContent>
                       </Card>
 
-                      {/* Humidity Card */}
                       <Card>
                         <CardContent className="p-4 text-center">
                           <Droplets className="h-8 w-8 mx-auto mb-2 text-blue-500" />
@@ -274,7 +255,6 @@ const FieldDetails = () => {
                         </CardContent>
                       </Card>
 
-                      {/* Wind Card */}
                       <Card>
                         <CardContent className="p-4 text-center">
                           <Wind className="h-8 w-8 mx-auto mb-2 text-gray-500" />
@@ -283,7 +263,6 @@ const FieldDetails = () => {
                         </CardContent>
                       </Card>
 
-                      {/* Conditions Card */}
                       <Card>
                         <CardContent className="p-4 text-center">
                           <Cloud className="h-8 w-8 mx-auto mb-2 text-gray-500" />
@@ -314,7 +293,6 @@ const FieldDetails = () => {
                   )}
                 </div>
 
-                {/* Weather map visualization - reduced size */}
                 <div className="md:col-span-1 flex flex-col items-center">
                   <div className="bg-white rounded-lg shadow overflow-hidden" style={{ height: "200px", width: "100%", position: "relative" }}>
                     <Map 
@@ -333,7 +311,6 @@ const FieldDetails = () => {
           </Card>
         </TabsContent>
 
-        {/* Soil Moisture Tab Content */}
         <TabsContent value="soil" className="space-y-4">
           <Card>
             <CardHeader>
@@ -341,7 +318,6 @@ const FieldDetails = () => {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Soil Moisture Stats */}
                 <div className="space-y-4">
                   <div className="p-4 bg-white rounded-lg shadow">
                     <h3 className="text-lg font-semibold mb-2">Current Soil Moisture</h3>
@@ -356,7 +332,6 @@ const FieldDetails = () => {
                     </div>
                   </div>
 
-                  {/* Soil Moisture History Chart */}
                   <div className="bg-white p-4 rounded-lg shadow">
                     <h3 className="text-lg font-semibold mb-4">Moisture History</h3>
                     <div className="h-64">
@@ -381,7 +356,6 @@ const FieldDetails = () => {
                   </div>
                 </div>
 
-                {/* Soil Moisture Map */}
                 <div className="space-y-4">
                   <div className="bg-white rounded-lg shadow overflow-hidden" style={{ height: "320px", width: "100%", position: "relative" }}>
                     <Map 

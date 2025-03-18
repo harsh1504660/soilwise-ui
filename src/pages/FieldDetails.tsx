@@ -1,6 +1,7 @@
+
 import "mapbox-gl/dist/mapbox-gl.css";
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Field } from '../types/field';
 import { Button } from '@/components/ui/button';
@@ -8,12 +9,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Leaf, Droplets, Sun, Thermometer, Wind, Cloud, CloudRain, MapPin } from 'lucide-react';
 import { getColorForNDVI, getSoilMoistureCategory, generateHistoricalData } from '@/lib/utils';
-import mapboxgl from 'mapbox-gl';
-import * as turf from '@turf/turf';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { toast } from "sonner";
-import { saveFieldData, fetchWeatherData, WEATHER_API_KEY } from '@/lib/supabaseClient';
+import { saveFieldData, fetchWeatherData } from '@/lib/supabaseClient';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import Map from '@/components/Map';
 
 const FieldDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -21,14 +21,6 @@ const FieldDetails = () => {
   const [field, setField] = useState<Field | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('ndvi');
-  
-  // Map refs
-  const ndviMapContainer = useRef<HTMLDivElement>(null);
-  const ndviMap = useRef<mapboxgl.Map | null>(null);
-  const soilMoistureMapContainer = useRef<HTMLDivElement>(null);
-  const soilMoistureMap = useRef<mapboxgl.Map | null>(null);
-  const weatherMapContainer = useRef<HTMLDivElement>(null);
-  const weatherMap = useRef<mapboxgl.Map | null>(null);
 
   // Load field data effect
   useEffect(() => {
@@ -63,274 +55,7 @@ const FieldDetails = () => {
     loadFieldData();
   }, [id]);
 
-  // Initialize NDVI map when field data is available or active tab changes
-  useEffect(() => {
-    if (!field || !ndviMapContainer.current || activeTab !== 'ndvi') return;
-    
-    console.log('Initializing NDVI map with field data:', field);
-    
-    // Cleanup previous map instance
-    if (ndviMap.current) {
-      ndviMap.current.remove();
-      ndviMap.current = null;
-    }
-    
-    // Initialize NDVI map
-    mapboxgl.accessToken = 'pk.eyJ1IjoiaGFyc2gxNTA0IiwiYSI6ImNtNzV5aDBnczBzZHcycXIyYXBuMHBoaGQifQ.xKFWa2vCyHofljEE1NLRQA';
-    
-    try {
-      ndviMap.current = new mapboxgl.Map({
-        container: ndviMapContainer.current,
-        style: 'mapbox://styles/mapbox/satellite-v9',
-        center: [0, 0], 
-        zoom: 14,
-        attributionControl: false, // Add this to hide attribution which might be causing sizing issues
-      });
-
-      ndviMap.current.on('load', () => {
-        if (!ndviMap.current || !field.polygon) return;
-        
-        try {
-          console.log('Adding NDVI polygon to map');
-          
-          // Add field polygon to map
-          ndviMap.current.addSource('field-polygon', {
-            type: 'geojson',
-            data: field.polygon
-          });
-          
-          // Add polygon layer with NDVI color
-          ndviMap.current.addLayer({
-            id: 'field-polygon-fill',
-            type: 'fill',
-            source: 'field-polygon',
-            paint: {
-              'fill-color': getColorForNDVI(field.ndvi || 0),
-              'fill-opacity': 0.7
-            }
-          });
-          
-          // Add outline layer
-          ndviMap.current.addLayer({
-            id: 'field-polygon-outline',
-            type: 'line',
-            source: 'field-polygon',
-            paint: {
-              'line-color': '#ffffff',
-              'line-width': 2
-            }
-          });
-          
-          // Fit map to polygon bounds
-          if (field.polygon && field.polygon.geometry) {
-            const bounds = turf.bbox(field.polygon);
-            ndviMap.current.fitBounds([
-              [bounds[0], bounds[1]],
-              [bounds[2], bounds[3]]
-            ], { padding: 50 });
-          }
-        } catch (error) {
-          console.error('Error setting up NDVI map:', error);
-          toast.error('Failed to load NDVI map visualization');
-        }
-      });
-
-      // Force map resize after the container is fully visible
-      setTimeout(() => {
-        ndviMap.current?.resize();
-      }, 100);
-    } catch (error) {
-      console.error('Failed to initialize NDVI map:', error);
-      toast.error('Could not initialize NDVI map');
-    }
-
-    return () => {
-      if (ndviMap.current) {
-        ndviMap.current.remove();
-        ndviMap.current = null;
-      }
-    };
-  }, [field, activeTab]);
-
-  // Initialize soil moisture map when field data is available or active tab changes
-  useEffect(() => {
-    if (!field || !soilMoistureMapContainer.current || activeTab !== 'soil') return;
-    
-    console.log('Initializing soil moisture map with field data:', field);
-    
-    // Cleanup previous map instance
-    if (soilMoistureMap.current) {
-      soilMoistureMap.current.remove();
-      soilMoistureMap.current = null;
-    }
-    
-    // Initialize soil moisture map
-    mapboxgl.accessToken = 'pk.eyJ1IjoiaGFyc2gxNTA0IiwiYSI6ImNtNzV5aDBnczBzZHcycXIyYXBuMHBoaGQifQ.xKFWa2vCyHofljEE1NLRQA';
-    
-    try {
-      soilMoistureMap.current = new mapboxgl.Map({
-        container: soilMoistureMapContainer.current,
-        style: 'mapbox://styles/mapbox/light-v10',
-        center: [0, 0],
-        zoom: 14,
-        attributionControl: false, // Add this to hide attribution which might be causing sizing issues
-      });
-
-      soilMoistureMap.current.on('load', () => {
-        if (!soilMoistureMap.current || !field.polygon) return;
-        
-        try {
-          console.log('Adding soil moisture polygon to map');
-          
-          // Add field polygon to map
-          soilMoistureMap.current.addSource('field-polygon-moisture', {
-            type: 'geojson',
-            data: field.polygon
-          });
-          
-          // Add polygon layer with soil moisture color
-          const moistureCategory = getSoilMoistureCategory(field.soilMoisture || 0);
-          soilMoistureMap.current.addLayer({
-            id: 'field-polygon-moisture-fill',
-            type: 'fill',
-            source: 'field-polygon-moisture',
-            paint: {
-              'fill-color': moistureCategory.color,
-              'fill-opacity': 0.7
-            }
-          });
-          
-          // Add outline layer
-          soilMoistureMap.current.addLayer({
-            id: 'field-polygon-moisture-outline',
-            type: 'line',
-            source: 'field-polygon-moisture',
-            paint: {
-              'line-color': '#000000',
-              'line-width': 2
-            }
-          });
-          
-          // Fit map to polygon bounds
-          if (field.polygon && field.polygon.geometry) {
-            const bounds = turf.bbox(field.polygon);
-            soilMoistureMap.current.fitBounds([
-              [bounds[0], bounds[1]],
-              [bounds[2], bounds[3]]
-            ], { padding: 50 });
-          }
-        } catch (error) {
-          console.error('Error setting up soil moisture map:', error);
-          toast.error('Failed to load soil moisture map visualization');
-        }
-      });
-
-      // Force map resize after the container is fully visible
-      setTimeout(() => {
-        soilMoistureMap.current?.resize();
-      }, 100);
-    } catch (error) {
-      console.error('Failed to initialize soil moisture map:', error);
-      toast.error('Could not initialize soil moisture map');
-    }
-
-    return () => {
-      if (soilMoistureMap.current) {
-        soilMoistureMap.current.remove();
-        soilMoistureMap.current = null;
-      }
-    };
-  }, [field, activeTab]);
-
-  // Initialize weather map when field data is available or active tab changes
-  useEffect(() => {
-    if (!field || !weatherMapContainer.current || activeTab !== 'weather') return;
-    
-    console.log('Initializing weather map with field data:', field);
-    
-    // Cleanup previous map instance
-    if (weatherMap.current) {
-      weatherMap.current.remove();
-      weatherMap.current = null;
-    }
-    
-    // Initialize weather map
-    mapboxgl.accessToken = 'pk.eyJ1IjoiaGFyc2gxNTA0IiwiYSI6ImNtNzV5aDBnczBzZHcycXIyYXBuMHBoaGQifQ.xKFWa2vCyHofljEE1NLRQA';
-    
-    try {
-      weatherMap.current = new mapboxgl.Map({
-        container: weatherMapContainer.current,
-        style: 'mapbox://styles/mapbox/streets-v12',
-        center: [0, 0],
-        zoom: 14,
-        attributionControl: false, // Add this to hide attribution
-      });
-
-      weatherMap.current.on('load', () => {
-        if (!weatherMap.current || !field.polygon) return;
-        
-        try {
-          console.log('Adding weather data to map');
-          
-          // Get field center
-          const center = turf.center(field.polygon);
-          const coords = center.geometry.coordinates as [number, number];
-          
-          // Add marker at field center
-          const weatherMarker = new mapboxgl.Marker({ color: '#ff6b6b' })
-            .setLngLat(coords)
-            .addTo(weatherMap.current!);
-          
-          // Add popup with weather info if available
-          if (field.weatherData) {
-            const temp = Math.round(field.weatherData.main.temp);
-            const condition = field.weatherData.weather[0].main;
-            const icon = field.weatherData.weather[0].icon;
-            
-            new mapboxgl.Popup({ closeButton: false })
-              .setLngLat(coords)
-              .setHTML(`
-                <div class="p-2 text-center">
-                  <img src="https://openweathermap.org/img/wn/${icon}@2x.png" width="50" alt="${condition}">
-                  <div class="font-bold">${temp}°C</div>
-                  <div>${condition}</div>
-                </div>
-              `)
-              .addTo(weatherMap.current!);
-          }
-          
-          // Fit map to polygon bounds
-          if (field.polygon && field.polygon.geometry) {
-            const bounds = turf.bbox(field.polygon);
-            weatherMap.current.fitBounds([
-              [bounds[0], bounds[1]],
-              [bounds[2], bounds[3]]
-            ], { padding: 100 });
-          }
-        } catch (error) {
-          console.error('Error setting up weather map:', error);
-          toast.error('Failed to load weather map visualization');
-        }
-      });
-
-      // Force map resize after the container is fully visible
-      setTimeout(() => {
-        weatherMap.current?.resize();
-      }, 100);
-    } catch (error) {
-      console.error('Failed to initialize weather map:', error);
-      toast.error('Could not initialize weather map');
-    }
-
-    return () => {
-      if (weatherMap.current) {
-        weatherMap.current.remove();
-        weatherMap.current = null;
-      }
-    };
-  }, [field, activeTab, field?.weatherData]);
-
-  // Function to refresh weather data using the hardcoded API key
+  // Function to refresh weather data
   const refreshWeatherData = async () => {
     try {
       if (!field || !field.polygon) {
@@ -342,7 +67,7 @@ const FieldDetails = () => {
       const center = turf.center(field.polygon);
       const [lng, lat] = center.geometry.coordinates;
       
-      // Fetch weather data using hardcoded API key
+      // Fetch weather data
       const weatherData = await fetchWeatherData(lat, lng);
       
       // Update field with new weather data
@@ -468,10 +193,14 @@ const FieldDetails = () => {
                   </div>
                 </div>
 
-                {/* NDVI Map and Legend */}
+                {/* NDVI Map using the Map component */}
                 <div className="space-y-4">
                   <div className="bg-white rounded-lg shadow overflow-hidden" style={{ height: "320px", width: "100%", position: "relative" }}>
-                    <div ref={ndviMapContainer} style={{ position: "absolute", top: 0, bottom: 0, width: "100%" }} />
+                    <Map 
+                      showControls={false} 
+                      displayMode="ndvi" 
+                      singleField={field} 
+                    />
                   </div>
                   <div className="p-4 bg-white rounded-lg shadow">
                     <h3 className="text-sm font-semibold mb-2">NDVI Legend</h3>
@@ -588,7 +317,11 @@ const FieldDetails = () => {
                 {/* Weather map visualization - reduced size */}
                 <div className="md:col-span-1 flex flex-col items-center">
                   <div className="bg-white rounded-lg shadow overflow-hidden" style={{ height: "200px", width: "100%", position: "relative" }}>
-                    <div ref={weatherMapContainer} style={{ position: "absolute", top: 0, bottom: 0, width: "100%" }} />
+                    <Map 
+                      showControls={false} 
+                      displayMode="default" 
+                      singleField={field} 
+                    />
                   </div>
                   <div className="text-sm text-center text-gray-500 mt-2">
                     <MapPin className="inline h-4 w-4 mr-1" />
@@ -651,7 +384,11 @@ const FieldDetails = () => {
                 {/* Soil Moisture Map */}
                 <div className="space-y-4">
                   <div className="bg-white rounded-lg shadow overflow-hidden" style={{ height: "320px", width: "100%", position: "relative" }}>
-                    <div ref={soilMoistureMapContainer} style={{ position: "absolute", top: 0, bottom: 0, width: "100%" }} />
+                    <Map 
+                      showControls={false} 
+                      displayMode="soil" 
+                      singleField={field} 
+                    />
                   </div>
                   <div className="p-4 bg-white rounded-lg shadow">
                     <h3 className="text-sm font-semibold mb-2">Soil Moisture Legend</h3>

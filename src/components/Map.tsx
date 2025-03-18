@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import mapboxgl from 'mapbox-gl';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
@@ -10,14 +11,20 @@ import { Field } from '../types/field';
 import { toast } from "sonner";
 import { saveFieldData } from '@/lib/supabaseClient';
 import { fetchRemoteSensingData } from '@/services/remoteSensingService';
+import NDVILegend from './NDVILegend';
+import SoilMoistureLegend from './SoilMoistureLegend';
 
 interface MapProps {
   onFieldCreated?: (field: Omit<Field, 'id' | 'created_at' | 'lastUpdated'>) => void;
   fields?: Field[];
   onFieldUpdated?: (fieldId: string, updates: Partial<Field>) => void;
+  showControls?: boolean;
+  displayMode?: 'ndvi' | 'soil' | 'default';
+  singleField?: Field;
 }
 
 const Map = forwardRef<{ startDrawing: () => void }, MapProps>((props, ref) => {
+  const { showControls = true, displayMode = 'default', singleField } = props;
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const draw = useRef<any>(null);
@@ -44,127 +51,140 @@ const Map = forwardRef<{ startDrawing: () => void }, MapProps>((props, ref) => {
     
     mapboxgl.accessToken = 'pk.eyJ1IjoiaGFyc2gxNTA0IiwiYSI6ImNtNzV5aDBnczBzZHcycXIyYXBuMHBoaGQifQ.xKFWa2vCyHofljEE1NLRQA';
     
+    const mapStyle = displayMode === 'soil' 
+      ? 'mapbox://styles/mapbox/light-v10' 
+      : 'mapbox://styles/mapbox/satellite-v9';
+    
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/satellite-v9',
+      style: mapStyle,
       center: [73.7586, 18.6550],
       zoom: 13,
       pitch: 0,
     });
 
-    const geocoder = new MapboxGeocoder({
-      accessToken: mapboxgl.accessToken,
-      mapboxgl: mapboxgl as any,
-      marker: false,
-      placeholder: 'Search for a location',
-      zoom: 14
-    });
-    
-    map.current.addControl(geocoder, 'top-right');
-
-    draw.current = new MapboxDraw({
-      displayControlsDefault: false,
-      controls: {
-        polygon: true,
-        trash: true
-      },
-      defaultMode: 'simple_select',
-      styles: [
-        {
-          'id': 'gl-draw-polygon-fill-inactive',
-          'type': 'fill',
-          'filter': ['all', ['==', 'active', 'false'], ['==', '$type', 'Polygon']],
-          'paint': {
-            'fill-color': '#3bb2d0',
-            'fill-outline-color': '#3bb2d0',
-            'fill-opacity': 0.3
-          }
+    if (showControls) {
+      const geocoder = new MapboxGeocoder({
+        accessToken: mapboxgl.accessToken,
+        mapboxgl: mapboxgl as any,
+        marker: false,
+        placeholder: 'Search for a location',
+        zoom: 14
+      });
+      
+      map.current.addControl(geocoder, 'top-right');
+      
+      draw.current = new MapboxDraw({
+        displayControlsDefault: false,
+        controls: {
+          polygon: true,
+          trash: true
         },
-        {
-          'id': 'gl-draw-polygon-fill-active',
-          'type': 'fill',
-          'filter': ['all', ['==', 'active', 'true'], ['==', '$type', 'Polygon']],
-          'paint': {
-            'fill-color': '#ffc800',
-            'fill-outline-color': '#ffc800',
-            'fill-opacity': 0.5
-          }
-        },
-        {
-          'id': 'gl-draw-polygon-stroke-inactive',
-          'type': 'line',
-          'filter': ['all', ['==', 'active', 'false'], ['==', '$type', 'Polygon']],
-          'layout': {
-            'line-cap': 'round',
-            'line-join': 'round'
+        defaultMode: 'simple_select',
+        styles: [
+          {
+            'id': 'gl-draw-polygon-fill-inactive',
+            'type': 'fill',
+            'filter': ['all', ['==', 'active', 'false'], ['==', '$type', 'Polygon']],
+            'paint': {
+              'fill-color': '#3bb2d0',
+              'fill-outline-color': '#3bb2d0',
+              'fill-opacity': 0.3
+            }
           },
-          'paint': {
-            'line-color': '#3bb2d0',
-            'line-width': 2
-          }
-        },
-        {
-          'id': 'gl-draw-polygon-stroke-active',
-          'type': 'line',
-          'filter': ['all', ['==', 'active', 'true'], ['==', '$type', 'Polygon']],
-          'layout': {
-            'line-cap': 'round',
-            'line-join': 'round'
+          {
+            'id': 'gl-draw-polygon-fill-active',
+            'type': 'fill',
+            'filter': ['all', ['==', 'active', 'true'], ['==', '$type', 'Polygon']],
+            'paint': {
+              'fill-color': '#ffc800',
+              'fill-outline-color': '#ffc800',
+              'fill-opacity': 0.5
+            }
           },
-          'paint': {
-            'line-color': '#ffc800',
-            'line-width': 3
+          {
+            'id': 'gl-draw-polygon-stroke-inactive',
+            'type': 'line',
+            'filter': ['all', ['==', 'active', 'false'], ['==', '$type', 'Polygon']],
+            'layout': {
+              'line-cap': 'round',
+              'line-join': 'round'
+            },
+            'paint': {
+              'line-color': '#3bb2d0',
+              'line-width': 2
+            }
+          },
+          {
+            'id': 'gl-draw-polygon-stroke-active',
+            'type': 'line',
+            'filter': ['all', ['==', 'active', 'true'], ['==', '$type', 'Polygon']],
+            'layout': {
+              'line-cap': 'round',
+              'line-join': 'round'
+            },
+            'paint': {
+              'line-color': '#ffc800',
+              'line-width': 3
+            }
+          },
+          {
+            'id': 'gl-draw-polygon-midpoint',
+            'type': 'circle',
+            'filter': ['all', ['==', '$type', 'Point'], ['==', 'meta', 'midpoint']],
+            'paint': {
+              'circle-radius': 5,
+              'circle-color': '#ffc800'
+            }
+          },
+          {
+            'id': 'gl-draw-polygon-and-line-vertex-inactive',
+            'type': 'circle',
+            'filter': ['all', ['==', 'meta', 'vertex'], ['==', '$type', 'Point']],
+            'paint': {
+              'circle-radius': 5,
+              'circle-color': '#fff',
+              'circle-stroke-color': '#3bb2d0',
+              'circle-stroke-width': 2
+            }
+          },
+          {
+            'id': 'gl-draw-polygon-and-line-vertex-active',
+            'type': 'circle',
+            'filter': ['all', ['==', 'meta', 'vertex'], ['==', '$type', 'Point'], ['==', 'active', 'true']],
+            'paint': {
+              'circle-radius': 7,
+              'circle-color': '#fff',
+              'circle-stroke-color': '#ffc800',
+              'circle-stroke-width': 3
+            }
           }
-        },
-        {
-          'id': 'gl-draw-polygon-midpoint',
-          'type': 'circle',
-          'filter': ['all', ['==', '$type', 'Point'], ['==', 'meta', 'midpoint']],
-          'paint': {
-            'circle-radius': 5,
-            'circle-color': '#ffc800'
-          }
-        },
-        {
-          'id': 'gl-draw-polygon-and-line-vertex-inactive',
-          'type': 'circle',
-          'filter': ['all', ['==', 'meta', 'vertex'], ['==', '$type', 'Point']],
-          'paint': {
-            'circle-radius': 5,
-            'circle-color': '#fff',
-            'circle-stroke-color': '#3bb2d0',
-            'circle-stroke-width': 2
-          }
-        },
-        {
-          'id': 'gl-draw-polygon-and-line-vertex-active',
-          'type': 'circle',
-          'filter': ['all', ['==', 'meta', 'vertex'], ['==', '$type', 'Point'], ['==', 'active', 'true']],
-          'paint': {
-            'circle-radius': 7,
-            'circle-color': '#fff',
-            'circle-stroke-color': '#ffc800',
-            'circle-stroke-width': 3
-          }
-        }
-      ]
-    });
-
-    map.current.addControl(draw.current, 'top-left');
-    map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
-    map.current.addControl(new mapboxgl.ScaleControl(), 'bottom-right');
-    map.current.addControl(new mapboxgl.FullscreenControl(), 'top-right');
-
-    map.current.on('draw.create', handleDrawCreate);
-    map.current.on('draw.delete', handleDrawDelete);
-    map.current.on('draw.update', handleDrawUpdate);
+        ]
+      });
+  
+      map.current.addControl(draw.current, 'top-left');
+      map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+      map.current.addControl(new mapboxgl.ScaleControl(), 'bottom-right');
+      map.current.addControl(new mapboxgl.FullscreenControl(), 'top-right');
+  
+      map.current.on('draw.create', handleDrawCreate);
+      map.current.on('draw.delete', handleDrawDelete);
+      map.current.on('draw.update', handleDrawUpdate);
+    } else {
+      // Just add minimal controls for viewing
+      map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+    }
 
     map.current.on('load', () => {
       if (map.current) {
         map.current.setPaintProperty('satellite', 'raster-opacity', 1);
       }
       
-      loadFields();
+      if (singleField) {
+        displaySingleField();
+      } else {
+        loadFields();
+      }
     });
 
     return () => {
@@ -174,13 +194,104 @@ const Map = forwardRef<{ startDrawing: () => void }, MapProps>((props, ref) => {
         map.current = null;
       }
     };
-  }, []);
+  }, [displayMode, singleField, showControls]);
+
+  const displaySingleField = () => {
+    if (!map.current || !singleField || !singleField.polygon) return;
+    
+    // Add the field polygon to the map
+    map.current.addSource('single-field', {
+      type: 'geojson',
+      data: singleField.polygon
+    });
+    
+    // Different styling based on the display mode
+    if (displayMode === 'ndvi') {
+      const ndviValue = singleField.ndvi || 0;
+      const color = getNDVIColor(ndviValue);
+      
+      map.current.addLayer({
+        id: 'single-field-fill',
+        type: 'fill',
+        source: 'single-field',
+        paint: {
+          'fill-color': color,
+          'fill-opacity': 0.7
+        }
+      });
+    } else if (displayMode === 'soil') {
+      const soilMoisture = singleField.soilMoisture || 0;
+      const color = getSoilMoistureColor(soilMoisture);
+      
+      map.current.addLayer({
+        id: 'single-field-fill',
+        type: 'fill',
+        source: 'single-field',
+        paint: {
+          'fill-color': color,
+          'fill-opacity': 0.7
+        }
+      });
+    } else {
+      map.current.addLayer({
+        id: 'single-field-fill',
+        type: 'fill',
+        source: 'single-field',
+        paint: {
+          'fill-color': '#3bb2d0',
+          'fill-opacity': 0.5
+        }
+      });
+    }
+    
+    // Add outline
+    map.current.addLayer({
+      id: 'single-field-outline',
+      type: 'line',
+      source: 'single-field',
+      paint: {
+        'line-color': '#ffffff',
+        'line-width': 2
+      }
+    });
+    
+    // Fit map to the field bounds
+    if (singleField.polygon && singleField.polygon.geometry) {
+      const bounds = turf.bbox(singleField.polygon);
+      map.current.fitBounds([
+        [bounds[0], bounds[1]],
+        [bounds[2], bounds[3]]
+      ], { padding: 50 });
+    }
+  };
+  
+  // Helper function to get NDVI color based on value
+  const getNDVIColor = (ndvi: number): string => {
+    if (ndvi < 0.2) return '#E74C3C'; // Red
+    if (ndvi < 0.4) return '#F39C12'; // Orange
+    if (ndvi < 0.6) return '#F1C40F'; // Yellow
+    if (ndvi < 0.8) return '#2ECC71'; // Light green
+    return '#27AE60'; // Dark green
+  };
+  
+  // Helper function to get soil moisture color based on value
+  const getSoilMoistureColor = (moisture: number): string => {
+    if (moisture < 15) return '#E74C3C'; // Very dry - Red
+    if (moisture < 30) return '#FF9933'; // Dry - Orange
+    if (moisture < 50) return '#2ECC71'; // Optimal - Green
+    if (moisture < 70) return '#3498DB'; // Moist - Blue
+    return '#1B4F72'; // Wet - Dark blue
+  };
 
   useEffect(() => {
     if (map.current && map.current.loaded()) {
-      loadFields();
+      if (singleField) {
+        displaySingleField();
+      } else {
+        loadFields();
+      }
     }
-  }, [props.fields]);
+  }, [props.fields, singleField, displayMode]);
 
   const loadFields = () => {
     if (!map.current || !draw.current || !props.fields) return;
@@ -343,6 +454,8 @@ const Map = forwardRef<{ startDrawing: () => void }, MapProps>((props, ref) => {
   return (
     <div className="relative w-full h-full">
       <div ref={mapContainer} className="absolute inset-0" />
+      {displayMode === 'ndvi' && <NDVILegend />}
+      {displayMode === 'soil' && <SoilMoistureLegend />}
       {!map.current && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
           <p className="text-gray-500">Loading map...</p>

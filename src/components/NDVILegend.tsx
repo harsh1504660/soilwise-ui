@@ -35,7 +35,7 @@ const NDVILegend = () => {
       
       <div className="text-xs mt-3 pt-2 border-t border-gray-200">
         <p className="font-semibold">Real NDVI & Soil Moisture Data</p>
-        <p>Based on satellite imagery from remote sensing API</p>
+        <p className="text-xs text-gray-500">Data may be simulated if API is unavailable due to CORS limitations</p>
       </div>
     </div>
   );

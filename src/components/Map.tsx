@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+
+import React, { useEffect, useRef, forwardRef, useImperativeHandle, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder';
@@ -10,6 +11,7 @@ import { Field } from '../types/field';
 import { toast } from "sonner";
 import { saveFieldData } from '@/lib/supabaseClient';
 import { fetchRemoteSensingData } from '@/services/remoteSensingService';
+import { getColorForNDVI, getSoilMoistureCategory } from '@/lib/utils';
 
 interface MapProps {
   onFieldCreated?: (field: Omit<Field, 'id' | 'created_at' | 'lastUpdated'>) => void;
@@ -26,7 +28,7 @@ const Map = forwardRef<{ startDrawing: () => void }, MapProps>((props, ref) => {
   const map = useRef<mapboxgl.Map | null>(null);
   const draw = useRef<any>(null);
   const popups = useRef<mapboxgl.Popup[]>([]);
-  const [mapLoaded, setMapLoaded] = React.useState(false);
+  const [mapLoaded, setMapLoaded] = useState(false);
 
   useImperativeHandle(ref, () => ({
     startDrawing: () => {
@@ -174,14 +176,17 @@ const Map = forwardRef<{ startDrawing: () => void }, MapProps>((props, ref) => {
     }
 
     map.current.on('load', () => {
+      console.log(`Map loaded for mode: ${displayMode}`);
       if (map.current) {
         map.current.setPaintProperty('satellite', 'raster-opacity', 1);
         setMapLoaded(true);
       }
       
       if (singleField) {
+        console.log("Single field detected, displaying on map");
         displaySingleField();
       } else {
+        console.log("Loading multiple fields on map");
         loadFields();
       }
     });
@@ -196,7 +201,10 @@ const Map = forwardRef<{ startDrawing: () => void }, MapProps>((props, ref) => {
   }, [displayMode, singleField, showControls]);
 
   const displaySingleField = () => {
-    if (!map.current || !singleField || !singleField.polygon) return;
+    if (!map.current || !singleField || !singleField.polygon) {
+      console.error("Cannot display field: map or field data missing");
+      return;
+    }
     
     console.log("Displaying single field in mode:", displayMode);
     
@@ -210,19 +218,19 @@ const Map = forwardRef<{ startDrawing: () => void }, MapProps>((props, ref) => {
       return;
     }
     
-    // Check if source already exists and remove it to avoid duplicates
-    if (map.current.getSource('single-field')) {
-      console.log("Removing existing single-field source");
-      if (map.current.getLayer('single-field-fill')) {
-        map.current.removeLayer('single-field-fill');
-      }
-      if (map.current.getLayer('single-field-outline')) {
-        map.current.removeLayer('single-field-outline');
-      }
-      map.current.removeSource('single-field');
-    }
-    
     try {
+      // Check if source already exists and remove it to avoid duplicates
+      if (map.current.getSource('single-field')) {
+        console.log("Removing existing single-field source");
+        if (map.current.getLayer('single-field-fill')) {
+          map.current.removeLayer('single-field-fill');
+        }
+        if (map.current.getLayer('single-field-outline')) {
+          map.current.removeLayer('single-field-outline');
+        }
+        map.current.removeSource('single-field');
+      }
+      
       // Add the field polygon to the map
       console.log("Adding single field source to map");
       map.current.addSource('single-field', {
@@ -233,7 +241,7 @@ const Map = forwardRef<{ startDrawing: () => void }, MapProps>((props, ref) => {
       // Different styling based on the display mode
       if (displayMode === 'ndvi') {
         const ndviValue = singleField.ndvi || 0;
-        const color = getNDVIColor(ndviValue);
+        const color = getColorForNDVI(ndviValue); 
         
         console.log("Adding NDVI field layer with color:", color);
         map.current.addLayer({
@@ -297,15 +305,6 @@ const Map = forwardRef<{ startDrawing: () => void }, MapProps>((props, ref) => {
     }
   };
   
-  // Helper function to get NDVI color based on value
-  const getNDVIColor = (ndvi: number): string => {
-    if (ndvi < 0.2) return '#E74C3C'; // Red
-    if (ndvi < 0.4) return '#F39C12'; // Orange
-    if (ndvi < 0.6) return '#F1C40F'; // Yellow
-    if (ndvi < 0.8) return '#2ECC71'; // Light green
-    return '#27AE60'; // Dark green
-  };
-  
   // Helper function to get soil moisture color based on value
   const getSoilMoistureColor = (moisture: number): string => {
     if (moisture < 15) return '#E74C3C'; // Very dry - Red
@@ -313,6 +312,15 @@ const Map = forwardRef<{ startDrawing: () => void }, MapProps>((props, ref) => {
     if (moisture < 50) return '#2ECC71'; // Optimal - Green
     if (moisture < 70) return '#3498DB'; // Moist - Blue
     return '#1B4F72'; // Wet - Dark blue
+  };
+
+  // Weather color based on temperature
+  const getWeatherColor = (temp: number): string => {
+    if (temp < 10) return '#87CEEB'; // Cold - Light Blue
+    if (temp < 20) return '#4682B4'; // Cool - Steel Blue
+    if (temp < 30) return '#32CD32'; // Moderate - Lime Green
+    if (temp < 35) return '#FF8C00'; // Warm - Dark Orange
+    return '#FF4500'; // Hot - Orange Red
   };
 
   useEffect(() => {

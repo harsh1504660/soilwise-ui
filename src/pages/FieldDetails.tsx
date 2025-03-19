@@ -1,3 +1,4 @@
+
 import "mapbox-gl/dist/mapbox-gl.css";
 
 import React, { useEffect, useState } from 'react';
@@ -62,6 +63,7 @@ const FieldDetails = () => {
       const center = turf.center(field.polygon);
       const [lng, lat] = center.geometry.coordinates;
       
+      toast.loading('Fetching weather data...');
       const weatherData = await fetchWeatherData(lat, lng);
       
       const updatedField: Field = {
@@ -180,37 +182,12 @@ const FieldDetails = () => {
                 </div>
 
                 <div className="space-y-4">
-                  <div className="bg-white rounded-lg shadow overflow-hidden" style={{ height: "420px", width: "100%", position: "relative" }}>
+                  <div className="bg-white rounded-lg shadow overflow-hidden" style={{ height: "100%", minHeight: "420px", width: "100%", position: "relative" }}>
                     <Map 
                       showControls={false} 
                       displayMode="ndvi" 
                       singleField={field} 
                     />
-                  </div>
-                  <div className="p-4 bg-white rounded-lg shadow">
-                    <h3 className="text-sm font-semibold mb-2">NDVI Legend</h3>
-                    <div className="grid grid-cols-5 gap-2 text-xs">
-                      <div className="text-center">
-                        <div className="h-4 bg-red-500 rounded"></div>
-                        <span>Poor</span>
-                      </div>
-                      <div className="text-center">
-                        <div className="h-4 bg-yellow-500 rounded"></div>
-                        <span>Fair</span>
-                      </div>
-                      <div className="text-center">
-                        <div className="h-4 bg-green-300 rounded"></div>
-                        <span>Good</span>
-                      </div>
-                      <div className="text-center">
-                        <div className="h-4 bg-green-500 rounded"></div>
-                        <span>Very Good</span>
-                      </div>
-                      <div className="text-center">
-                        <div className="h-4 bg-green-700 rounded"></div>
-                        <span>Excellent</span>
-                      </div>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -357,37 +334,12 @@ const FieldDetails = () => {
                 </div>
 
                 <div className="space-y-4">
-                  <div className="bg-white rounded-lg shadow overflow-hidden" style={{ height: "420px", width: "100%", position: "relative" }}>
+                  <div className="bg-white rounded-lg shadow overflow-hidden" style={{ height: "100%", minHeight: "420px", width: "100%", position: "relative" }}>
                     <Map 
                       showControls={false} 
                       displayMode="soil" 
                       singleField={field} 
                     />
-                  </div>
-                  <div className="p-4 bg-white rounded-lg shadow">
-                    <h3 className="text-sm font-semibold mb-2">Soil Moisture Legend</h3>
-                    <div className="grid grid-cols-5 gap-2 text-xs">
-                      <div className="text-center">
-                        <div className="h-4 rounded" style={{ backgroundColor: '#E74C3C' }}></div>
-                        <span>Very Dry</span>
-                      </div>
-                      <div className="text-center">
-                        <div className="h-4 rounded" style={{ backgroundColor: '#FF9933' }}></div>
-                        <span>Dry</span>
-                      </div>
-                      <div className="text-center">
-                        <div className="h-4 rounded" style={{ backgroundColor: '#2ECC71' }}></div>
-                        <span>Optimal</span>
-                      </div>
-                      <div className="text-center">
-                        <div className="h-4 rounded" style={{ backgroundColor: '#3498DB' }}></div>
-                        <span>Moist</span>
-                      </div>
-                      <div className="text-center">
-                        <div className="h-4 rounded" style={{ backgroundColor: '#1B4F72' }}></div>
-                        <span>Wet</span>
-                      </div>
-                    </div>
                   </div>
                 </div>
               </div>

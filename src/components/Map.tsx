@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import mapboxgl from 'mapbox-gl';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
@@ -27,6 +26,7 @@ const Map = forwardRef<{ startDrawing: () => void }, MapProps>((props, ref) => {
   const map = useRef<mapboxgl.Map | null>(null);
   const draw = useRef<any>(null);
   const popups = useRef<mapboxgl.Popup[]>([]);
+  const [mapLoaded, setMapLoaded] = React.useState(false);
 
   useImperativeHandle(ref, () => ({
     startDrawing: () => {
@@ -176,6 +176,7 @@ const Map = forwardRef<{ startDrawing: () => void }, MapProps>((props, ref) => {
     map.current.on('load', () => {
       if (map.current) {
         map.current.setPaintProperty('satellite', 'raster-opacity', 1);
+        setMapLoaded(true);
       }
       
       if (singleField) {
@@ -197,14 +198,21 @@ const Map = forwardRef<{ startDrawing: () => void }, MapProps>((props, ref) => {
   const displaySingleField = () => {
     if (!map.current || !singleField || !singleField.polygon) return;
     
+    console.log("Displaying single field in mode:", displayMode);
+    
     // Wait for map to be fully loaded
     if (!map.current.loaded()) {
-      map.current.once('load', displaySingleField);
+      console.log("Map not fully loaded, waiting for load event");
+      map.current.once('load', () => {
+        console.log("Map load event triggered, displaying field");
+        displaySingleField();
+      });
       return;
     }
     
     // Check if source already exists and remove it to avoid duplicates
     if (map.current.getSource('single-field')) {
+      console.log("Removing existing single-field source");
       if (map.current.getLayer('single-field-fill')) {
         map.current.removeLayer('single-field-fill');
       }
@@ -214,69 +222,78 @@ const Map = forwardRef<{ startDrawing: () => void }, MapProps>((props, ref) => {
       map.current.removeSource('single-field');
     }
     
-    // Add the field polygon to the map
-    map.current.addSource('single-field', {
-      type: 'geojson',
-      data: singleField.polygon
-    });
-    
-    // Different styling based on the display mode
-    if (displayMode === 'ndvi') {
-      const ndviValue = singleField.ndvi || 0;
-      const color = getNDVIColor(ndviValue);
+    try {
+      // Add the field polygon to the map
+      console.log("Adding single field source to map");
+      map.current.addSource('single-field', {
+        type: 'geojson',
+        data: singleField.polygon
+      });
       
-      map.current.addLayer({
-        id: 'single-field-fill',
-        type: 'fill',
-        source: 'single-field',
-        paint: {
-          'fill-color': color,
-          'fill-opacity': 0.7
-        }
-      });
-    } else if (displayMode === 'soil') {
-      const soilMoisture = singleField.soilMoisture || 0;
-      const color = getSoilMoistureColor(soilMoisture);
-      
-      map.current.addLayer({
-        id: 'single-field-fill',
-        type: 'fill',
-        source: 'single-field',
-        paint: {
-          'fill-color': color,
-          'fill-opacity': 0.7
-        }
-      });
-    } else {
-      map.current.addLayer({
-        id: 'single-field-fill',
-        type: 'fill',
-        source: 'single-field',
-        paint: {
-          'fill-color': '#3bb2d0',
-          'fill-opacity': 0.5
-        }
-      });
-    }
-    
-    // Add outline
-    map.current.addLayer({
-      id: 'single-field-outline',
-      type: 'line',
-      source: 'single-field',
-      paint: {
-        'line-color': '#ffffff',
-        'line-width': 2
+      // Different styling based on the display mode
+      if (displayMode === 'ndvi') {
+        const ndviValue = singleField.ndvi || 0;
+        const color = getNDVIColor(ndviValue);
+        
+        console.log("Adding NDVI field layer with color:", color);
+        map.current.addLayer({
+          id: 'single-field-fill',
+          type: 'fill',
+          source: 'single-field',
+          paint: {
+            'fill-color': color,
+            'fill-opacity': 0.7
+          }
+        });
+      } else if (displayMode === 'soil') {
+        const soilMoisture = singleField.soilMoisture || 0;
+        const color = getSoilMoistureColor(soilMoisture);
+        
+        console.log("Adding soil moisture field layer with color:", color);
+        map.current.addLayer({
+          id: 'single-field-fill',
+          type: 'fill',
+          source: 'single-field',
+          paint: {
+            'fill-color': color,
+            'fill-opacity': 0.7
+          }
+        });
+      } else {
+        console.log("Adding default field layer");
+        map.current.addLayer({
+          id: 'single-field-fill',
+          type: 'fill',
+          source: 'single-field',
+          paint: {
+            'fill-color': '#3bb2d0',
+            'fill-opacity': 0.5
+          }
+        });
       }
-    });
-    
-    // Fit map to the field bounds
-    if (singleField.polygon && singleField.polygon.geometry) {
-      const bounds = turf.bbox(singleField.polygon);
-      map.current.fitBounds([
-        [bounds[0], bounds[1]],
-        [bounds[2], bounds[3]]
-      ], { padding: 50 });
+      
+      // Add outline
+      map.current.addLayer({
+        id: 'single-field-outline',
+        type: 'line',
+        source: 'single-field',
+        paint: {
+          'line-color': '#ffffff',
+          'line-width': 2
+        }
+      });
+      
+      // Fit map to the field bounds
+      if (singleField.polygon && singleField.polygon.geometry) {
+        console.log("Fitting map to field bounds");
+        const bounds = turf.bbox(singleField.polygon);
+        map.current.fitBounds([
+          [bounds[0], bounds[1]],
+          [bounds[2], bounds[3]]
+        ], { padding: 50 });
+      }
+    } catch (error) {
+      console.error("Error displaying single field:", error);
     }
   };
   
@@ -299,14 +316,15 @@ const Map = forwardRef<{ startDrawing: () => void }, MapProps>((props, ref) => {
   };
 
   useEffect(() => {
-    if (map.current && map.current.loaded()) {
+    if (map.current && mapLoaded) {
+      console.log("Map loaded and ready, updating content");
       if (singleField) {
         displaySingleField();
       } else {
         loadFields();
       }
     }
-  }, [props.fields, singleField, displayMode]);
+  }, [props.fields, singleField, displayMode, mapLoaded]);
 
   const loadFields = () => {
     if (!map.current || !draw.current || !props.fields) return;
@@ -380,8 +398,6 @@ const Map = forwardRef<{ startDrawing: () => void }, MapProps>((props, ref) => {
       const area = turf.area(feature);
       const rounded = Math.round(area * 100) / 100;
 
-      toast.loading('Fetching real NDVI and soil moisture data...');
-
       const coordinates = feature.geometry.coordinates[0].map((coord: number[]) => [coord[0], coord[1]]);
       
       let ndvi = Math.random() * (0.9 - 0.1) + 0.1;
@@ -392,7 +408,6 @@ const Map = forwardRef<{ startDrawing: () => void }, MapProps>((props, ref) => {
       if (remoteSensingData) {
         ndvi = remoteSensingData.ndvi;
         soilMoisture = remoteSensingData.soil_moisture;
-        toast.success('Received real NDVI and soil moisture data');
       } else {
         toast.error('Using simulated data as fallback');
       }
@@ -469,7 +484,7 @@ const Map = forwardRef<{ startDrawing: () => void }, MapProps>((props, ref) => {
   return (
     <div className="relative w-full h-full">
       <div ref={mapContainer} className="absolute inset-0" />
-      {!map.current && (
+      {!mapLoaded && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
           <p className="text-gray-500">Loading map...</p>
         </div>

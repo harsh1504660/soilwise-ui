@@ -16,10 +16,20 @@ export const fetchRemoteSensingData = async (
   coordinates: [number, number][]
 ): Promise<{ ndvi: number; soil_moisture: number } | null> => {
   try {
+    // Prevent processing if no coordinates provided
+    if (!coordinates || coordinates.length === 0) {
+      console.log("No coordinates provided, skipping remote sensing data fetch");
+      return null;
+    }
+    
     console.log("Fetching remote sensing data for coordinates:", coordinates);
     
-    // Only show loading toast if coordinates are provided (user action)
-    const showToasts = coordinates && coordinates.length > 0;
+    // Only show loading toast if coordinates are provided and have sufficient points
+    const showToasts = coordinates && coordinates.length >= 3;
+    
+    if (showToasts) {
+      toast.loading('Fetching real NDVI and soil moisture data...');
+    }
     
     // Make sure the polygon is closed (first and last coordinates are the same)
     let requestCoords = [...coordinates];
@@ -57,6 +67,11 @@ export const fetchRemoteSensingData = async (
 
     const data = await response.json();
     console.log("Remote sensing data received:", data);
+    
+    if (showToasts) {
+      toast.success('Received real NDVI and soil moisture data');
+    }
+    
     return data;
   } catch (error) {
     console.error("Failed to fetch remote sensing data:", error);

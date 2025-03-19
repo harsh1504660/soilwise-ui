@@ -31,8 +31,11 @@ export const fetchRemoteSensingData = async (
     console.log("Fetching remote sensing data for coordinates:", coordinates);
     
     // Only show loading toast if explicitly requested and coordinates are valid
+    let toastId;
     if (showToast) {
-      toast.loading('Fetching real NDVI and soil moisture data...');
+      toastId = toast.loading('Fetching real NDVI and soil moisture data...', {
+        id: 'fetch-remote-sensing-data',
+      });
     }
     
     // Make sure the polygon is closed (first and last coordinates are the same)
@@ -64,7 +67,9 @@ export const fetchRemoteSensingData = async (
       const errorData = await response.json().catch(() => null);
       console.error("Error fetching remote sensing data:", errorData);
       if (showToast) {
-        toast.error(`API error: ${response.status} ${response.statusText}`);
+        toast.error(`API error: ${response.status} ${response.statusText}`, {
+          id: 'fetch-remote-sensing-data',
+        });
       }
       throw new Error(`API error: ${response.status} ${response.statusText}`);
     }
@@ -73,7 +78,10 @@ export const fetchRemoteSensingData = async (
     console.log("Remote sensing data received:", data);
     
     if (showToast) {
-      toast.success('Received real NDVI and soil moisture data');
+      toast.success('Received real NDVI and soil moisture data', {
+        id: 'fetch-remote-sensing-data',
+        duration: 3000, // Auto dismiss after 3 seconds
+      });
     }
     
     return data;
@@ -84,12 +92,25 @@ export const fetchRemoteSensingData = async (
     if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
       console.log("CORS issue detected, returning simulated data");
       
+      if (showToast) {
+        toast.error('Connection issue, using simulated data', {
+          id: 'fetch-remote-sensing-data',
+          duration: 3000,
+        });
+      }
+      
       // Return simulated data as fallback
       return {
         ndvi: Math.random() * (0.9 - 0.1) + 0.1,
         soil_moisture: Math.random() * 40 + 10
       };
     } else {
+      if (showToast) {
+        toast.error(`Failed to fetch data: ${error instanceof Error ? error.message : 'Unknown error'}`, {
+          id: 'fetch-remote-sensing-data',
+          duration: 3000,
+        });
+      }
       return null;
     }
   }

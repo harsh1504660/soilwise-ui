@@ -21,13 +21,17 @@ export const checkSupabaseConnection = async () => {
     const { error } = await supabase.from('fields').select('count', { count: 'exact', head: true });
     if (error) {
       console.error('Supabase connection error:', error);
-      toast.error('Database connection failed. Using local storage.');
+      toast.error('Database connection failed. Using local storage.', {
+        duration: 3000,
+      });
       return false;
     }
     return true;
   } catch (e) {
     console.error('Failed to connect to Supabase:', e);
-    toast.error('Database connection failed. Using local storage.');
+    toast.error('Database connection failed. Using local storage.', {
+      duration: 3000,
+    });
     return false;
   }
 };
@@ -38,7 +42,9 @@ export const WEATHER_API_KEY = '72dea435aebf60dda5b94b59efa8117f';
 // Helper to fetch weather data
 export const fetchWeatherData = async (lat: number, lng: number) => {
   try {
-    toast.info('Fetching weather data...');
+    const toastId = toast.loading('Fetching weather data...', {
+      id: 'fetch-weather-data',
+    });
     
     const response = await fetch(
       `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&units=metric&appid=${WEATHER_API_KEY}`
@@ -46,13 +52,24 @@ export const fetchWeatherData = async (lat: number, lng: number) => {
     
     if (!response.ok) {
       const errorData = await response.json();
+      toast.error(`Weather API error: ${errorData.message || response.statusText}`, {
+        id: 'fetch-weather-data',
+      });
       throw new Error(errorData.message || 'Weather API request failed');
     }
     
-    return await response.json();
+    const data = await response.json();
+    toast.success('Weather data updated successfully', {
+      id: 'fetch-weather-data',
+      duration: 3000,
+    });
+    return data;
   } catch (error) {
     console.error('Error fetching weather data:', error);
-    toast.error(`Failed to fetch weather data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    toast.error(`Failed to fetch weather data: ${error instanceof Error ? error.message : 'Unknown error'}`, {
+      id: 'fetch-weather-data',
+      duration: 3000,
+    });
     throw error;
   }
 };
@@ -92,19 +109,27 @@ export const saveFieldData = async (field: Field) => {
       
       if (error) {
         console.error('Supabase update error:', error);
-        toast.error('Failed to save to database. Data saved locally.');
+        toast.error('Failed to save to database. Data saved locally.', {
+          duration: 3000,
+        });
         return false;
       }
       
-      toast.success('Field data saved successfully');
+      toast.success('Field data saved successfully', {
+        duration: 3000,
+      });
       return true;
     }
     
-    toast.success('Field data saved locally');
+    toast.success('Field data saved locally', {
+      duration: 3000,
+    });
     return true;
   } catch (error) {
     console.error('Error saving field data:', error);
-    toast.error('Failed to save data. Please try again.');
+    toast.error('Failed to save data. Please try again.', {
+      duration: 3000,
+    });
     return false;
   }
 };

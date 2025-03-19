@@ -182,7 +182,7 @@ const FieldDetails = () => {
                 </div>
 
                 <div className="space-y-4">
-                  <div className="bg-white rounded-lg shadow overflow-hidden" style={{ height: "100%", minHeight: "420px", width: "100%", position: "relative" }}>
+                  <div className="bg-white rounded-lg shadow overflow-hidden" style={{ height: "400px", width: "100%", position: "relative" }}>
                     <Map 
                       showControls={false} 
                       displayMode="ndvi" 
@@ -271,7 +271,7 @@ const FieldDetails = () => {
                 </div>
 
                 <div className="md:col-span-1 flex flex-col items-center">
-                  <div className="bg-white rounded-lg shadow overflow-hidden h-full" style={{ minHeight: "350px", width: "100%", position: "relative" }}>
+                  <div className="bg-white rounded-lg shadow overflow-hidden" style={{ height: "350px", width: "100%", position: "relative" }}>
                     <Map 
                       showControls={false} 
                       displayMode="default" 
@@ -334,7 +334,7 @@ const FieldDetails = () => {
                 </div>
 
                 <div className="space-y-4">
-                  <div className="bg-white rounded-lg shadow overflow-hidden" style={{ height: "100%", minHeight: "420px", width: "100%", position: "relative" }}>
+                  <div className="bg-white rounded-lg shadow overflow-hidden" style={{ height: "400px", width: "100%", position: "relative" }}>
                     <Map 
                       showControls={false} 
                       displayMode="soil" 

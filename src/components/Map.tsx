@@ -177,14 +177,13 @@ const Map = forwardRef<{ startDrawing: () => void }, MapProps>((props, ref) => {
 
     map.current.on('load', () => {
       console.log(`Map loaded for mode: ${displayMode}`);
-      if (map.current) {
-        map.current.setPaintProperty('satellite', 'raster-opacity', 1);
-        setMapLoaded(true);
-      }
+      setMapLoaded(true);
       
       if (singleField) {
         console.log("Single field detected, displaying on map");
-        displaySingleField();
+        setTimeout(() => {
+          displaySingleField();
+        }, 500); // Add a small delay to ensure the map is fully initialized
       } else {
         console.log("Loading multiple fields on map");
         loadFields();
@@ -198,27 +197,29 @@ const Map = forwardRef<{ startDrawing: () => void }, MapProps>((props, ref) => {
         map.current = null;
       }
     };
-  }, [displayMode, singleField, showControls]);
+  }, [displayMode, showControls]);
 
   const displaySingleField = () => {
     if (!map.current || !singleField || !singleField.polygon) {
-      console.error("Cannot display field: map or field data missing");
+      console.error("Cannot display field: map or field data missing", { 
+        mapExists: !!map.current, 
+        fieldExists: !!singleField, 
+        polygonExists: singleField ? !!singleField.polygon : false 
+      });
       return;
     }
     
     console.log("Displaying single field in mode:", displayMode);
     
-    // Wait for map to be fully loaded
-    if (!map.current.loaded()) {
-      console.log("Map not fully loaded, waiting for load event");
-      map.current.once('load', () => {
-        console.log("Map load event triggered, displaying field");
-        displaySingleField();
-      });
-      return;
-    }
-    
     try {
+      // Check if map is ready to add sources and layers
+      if (!map.current.isStyleLoaded()) {
+        console.log("Map style not fully loaded, waiting before adding field");
+        // Try again in a moment
+        setTimeout(displaySingleField, 200);
+        return;
+      }
+      
       // Check if source already exists and remove it to avoid duplicates
       if (map.current.getSource('single-field')) {
         console.log("Removing existing single-field source");
@@ -232,7 +233,7 @@ const Map = forwardRef<{ startDrawing: () => void }, MapProps>((props, ref) => {
       }
       
       // Add the field polygon to the map
-      console.log("Adding single field source to map");
+      console.log("Adding single field source to map", singleField.polygon);
       map.current.addSource('single-field', {
         type: 'geojson',
         data: singleField.polygon
@@ -324,13 +325,12 @@ const Map = forwardRef<{ startDrawing: () => void }, MapProps>((props, ref) => {
   };
 
   useEffect(() => {
-    if (map.current && mapLoaded) {
-      console.log("Map loaded and ready, updating content");
-      if (singleField) {
-        displaySingleField();
-      } else {
-        loadFields();
-      }
+    if (map.current && mapLoaded && singleField) {
+      console.log("Map loaded and ready, displaying single field");
+      displaySingleField();
+    } else if (map.current && mapLoaded && props.fields) {
+      console.log("Map loaded and ready, loading multiple fields");
+      loadFields();
     }
   }, [props.fields, singleField, displayMode, mapLoaded]);
 
@@ -411,7 +411,8 @@ const Map = forwardRef<{ startDrawing: () => void }, MapProps>((props, ref) => {
       let ndvi = Math.random() * (0.9 - 0.1) + 0.1;
       let soilMoisture = Math.random() * 40 + 10;
       
-      const remoteSensingData = await fetchRemoteSensingData(coordinates);
+      toast.loading('Fetching real NDVI and soil moisture data...');
+      const remoteSensingData = await fetchRemoteSensingData(coordinates, true);
       
       if (remoteSensingData) {
         ndvi = remoteSensingData.ndvi;
@@ -454,7 +455,7 @@ const Map = forwardRef<{ startDrawing: () => void }, MapProps>((props, ref) => {
       let ndvi;
       let soilMoisture;
       
-      const remoteSensingData = await fetchRemoteSensingData(coordinates);
+      const remoteSensingData = await fetchRemoteSensingData(coordinates, true);
       
       if (remoteSensingData) {
         ndvi = remoteSensingData.ndvi;

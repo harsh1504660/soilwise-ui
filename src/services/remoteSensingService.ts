@@ -13,7 +13,8 @@ const API_URL = "https://ndvi-api-80ia.onrender.com/get_ndvi_soil_moisture";
  * @returns Promise with NDVI and soil moisture values
  */
 export const fetchRemoteSensingData = async (
-  coordinates: [number, number][]
+  coordinates: [number, number][],
+  showToast: boolean = false
 ): Promise<{ ndvi: number; soil_moisture: number } | null> => {
   try {
     // Prevent processing if no coordinates provided
@@ -22,13 +23,15 @@ export const fetchRemoteSensingData = async (
       return null;
     }
     
+    if (coordinates.length < 3) {
+      console.log("Not enough coordinate points for a polygon, skipping remote sensing data fetch");
+      return null;
+    }
+    
     console.log("Fetching remote sensing data for coordinates:", coordinates);
     
-    // Only show loading toast if coordinates are provided and have sufficient points
-    // and only in interactive context (not in initial data load)
-    const isUserAction = document.hasFocus() && coordinates.length >= 3;
-    
-    if (isUserAction) {
+    // Only show loading toast if explicitly requested and coordinates are valid
+    if (showToast) {
       toast.loading('Fetching real NDVI and soil moisture data...');
     }
     
@@ -60,7 +63,7 @@ export const fetchRemoteSensingData = async (
     if (!response.ok) {
       const errorData = await response.json().catch(() => null);
       console.error("Error fetching remote sensing data:", errorData);
-      if (isUserAction) {
+      if (showToast) {
         toast.error(`API error: ${response.status} ${response.statusText}`);
       }
       throw new Error(`API error: ${response.status} ${response.statusText}`);
@@ -69,7 +72,7 @@ export const fetchRemoteSensingData = async (
     const data = await response.json();
     console.log("Remote sensing data received:", data);
     
-    if (isUserAction) {
+    if (showToast) {
       toast.success('Received real NDVI and soil moisture data');
     }
     

@@ -18,6 +18,9 @@ export const fetchRemoteSensingData = async (
   try {
     console.log("Fetching remote sensing data for coordinates:", coordinates);
     
+    // Only show loading toast if coordinates are provided (user action)
+    const showToasts = coordinates && coordinates.length > 0;
+    
     // Make sure the polygon is closed (first and last coordinates are the same)
     let requestCoords = [...coordinates];
     if (
@@ -46,6 +49,9 @@ export const fetchRemoteSensingData = async (
     if (!response.ok) {
       const errorData = await response.json().catch(() => null);
       console.error("Error fetching remote sensing data:", errorData);
+      if (showToasts) {
+        toast.error(`API error: ${response.status} ${response.statusText}`);
+      }
       throw new Error(`API error: ${response.status} ${response.statusText}`);
     }
 
@@ -57,7 +63,6 @@ export const fetchRemoteSensingData = async (
     
     // If we get a CORS error, try to handle it by using a fallback or proxy
     if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-      toast.error("CORS issue detected. Using simulated data as fallback");
       console.log("CORS issue detected, returning simulated data");
       
       // Return simulated data as fallback
@@ -66,7 +71,6 @@ export const fetchRemoteSensingData = async (
         soil_moisture: Math.random() * 40 + 10
       };
     } else {
-      toast.error("Failed to fetch real NDVI and soil moisture data");
       return null;
     }
   }

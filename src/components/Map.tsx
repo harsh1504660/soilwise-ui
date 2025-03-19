@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import mapboxgl from 'mapbox-gl';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
@@ -195,6 +196,23 @@ const Map = forwardRef<{ startDrawing: () => void }, MapProps>((props, ref) => {
 
   const displaySingleField = () => {
     if (!map.current || !singleField || !singleField.polygon) return;
+    
+    // Wait for map to be fully loaded
+    if (!map.current.loaded()) {
+      map.current.once('load', displaySingleField);
+      return;
+    }
+    
+    // Check if source already exists and remove it to avoid duplicates
+    if (map.current.getSource('single-field')) {
+      if (map.current.getLayer('single-field-fill')) {
+        map.current.removeLayer('single-field-fill');
+      }
+      if (map.current.getLayer('single-field-outline')) {
+        map.current.removeLayer('single-field-outline');
+      }
+      map.current.removeSource('single-field');
+    }
     
     // Add the field polygon to the map
     map.current.addSource('single-field', {

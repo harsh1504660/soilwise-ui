@@ -49,5 +49,6 @@ export interface Field {
     cropType?: string;
     accuracy?: number;
     lastUpdated?: string;
+    dataSource?: string; // Added the dataSource property
   };
 }

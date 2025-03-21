@@ -16,6 +16,8 @@ export const fetchRemoteSensingData = async (
   coordinates: [number, number][],
   showToast: boolean = false
 ): Promise<{ ndvi: number; soil_moisture: number } | null> => {
+  let toastId;
+  
   try {
     // Prevent processing if no coordinates provided
     if (!coordinates || coordinates.length === 0) {
@@ -31,11 +33,10 @@ export const fetchRemoteSensingData = async (
     console.log("Fetching remote sensing data for coordinates:", coordinates);
     
     // Only show loading toast if explicitly requested and coordinates are valid
-    let toastId;
     if (showToast) {
       toastId = toast.loading('Fetching real NDVI and soil moisture data...', {
         id: 'fetch-remote-sensing-data',
-        duration: 10000, // Auto-dismiss after 10 seconds if not explicitly dismissed
+        duration: 15000, // Auto-dismiss after 15 seconds if not explicitly dismissed
       });
     }
     
@@ -67,7 +68,7 @@ export const fetchRemoteSensingData = async (
     if (!response.ok) {
       const errorData = await response.json().catch(() => null);
       console.error("Error fetching remote sensing data:", errorData);
-      if (showToast) {
+      if (showToast && toastId) {
         toast.error(`API error: ${response.status} ${response.statusText}`, {
           id: 'fetch-remote-sensing-data',
           duration: 3000,
@@ -79,7 +80,7 @@ export const fetchRemoteSensingData = async (
     const data = await response.json();
     console.log("Remote sensing data received:", data);
     
-    if (showToast) {
+    if (showToast && toastId) {
       toast.success('Received real NDVI and soil moisture data', {
         id: 'fetch-remote-sensing-data',
         duration: 3000, // Auto dismiss after 3 seconds
@@ -94,7 +95,7 @@ export const fetchRemoteSensingData = async (
     if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
       console.log("CORS issue detected, returning simulated data");
       
-      if (showToast) {
+      if (showToast && toastId) {
         toast.error('Connection issue, using simulated data', {
           id: 'fetch-remote-sensing-data',
           duration: 3000,
@@ -107,7 +108,7 @@ export const fetchRemoteSensingData = async (
         soil_moisture: Math.random() * 40 + 10
       };
     } else {
-      if (showToast) {
+      if (showToast && toastId) {
         toast.error(`Failed to fetch data: ${error instanceof Error ? error.message : 'Unknown error'}`, {
           id: 'fetch-remote-sensing-data',
           duration: 3000,

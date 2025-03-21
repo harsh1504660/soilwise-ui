@@ -6,11 +6,12 @@ import { Field } from '../types/field';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Leaf, Droplets, Sun, Thermometer, Wind, Cloud, CloudRain, MapPin, TrendingUp, LineChart as LineChartIcon } from 'lucide-react';
+import { ArrowLeft, Leaf, Droplets, Sun, Thermometer, Wind, Cloud, CloudRain, MapPin, TrendingUp, LineChart as LineChartIcon, RefreshCw } from 'lucide-react';
 import { getColorForNDVI, getSoilMoistureCategory, generateHistoricalData } from '@/lib/utils';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { toast } from "sonner";
 import { saveFieldData, fetchWeatherData } from '@/lib/supabaseClient';
+import { fetchYieldPrediction } from '@/services/yieldPredictionService';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import Map from '@/components/Map';
 import * as turf from '@turf/turf';
@@ -20,6 +21,7 @@ const FieldDetails = () => {
   const navigate = useNavigate();
   const [field, setField] = useState<Field | null>(null);
   const [loading, setLoading] = useState(true);
+  const [yieldLoading, setYieldLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('ndvi');
 
   useEffect(() => {
@@ -35,31 +37,6 @@ const FieldDetails = () => {
             }
             if (!parsedField.soilMoistureHistory || parsedField.soilMoistureHistory.length === 0) {
               parsedField.soilMoistureHistory = generateHistoricalData(parsedField, 'soilMoisture');
-            }
-            
-            if (!parsedField.yieldPrediction) {
-              const ndviValue = parsedField.ndvi || 0.5;
-              const soilMoistureValue = parsedField.soilMoisture || 30;
-              
-              parsedField.yieldPrediction = {
-                currentYield: Math.round((ndviValue * 8 + soilMoistureValue / 10) * 0.8 * 10) / 10,
-                potentialYield: Math.round((ndviValue * 8 + soilMoistureValue / 10) * 1.2 * 10) / 10,
-                yieldGap: Math.round((ndviValue * 8 + soilMoistureValue / 10) * 0.4 * 10) / 10,
-                cropType: ['Wheat', 'Corn', 'Soybean', 'Rice'][Math.floor(Math.random() * 4)],
-                recommendations: [
-                  'Optimize irrigation schedule based on soil moisture data',
-                  'Apply nitrogen fertilizer to reach potential yield',
-                  'Monitor for potential pest issues in high-density areas',
-                  'Consider variable rate application in low NDVI zones'
-                ],
-                yieldHistory: [
-                  { year: new Date().getFullYear() - 4, value: Math.round((ndviValue * 6 + Math.random() * 2) * 10) / 10 },
-                  { year: new Date().getFullYear() - 3, value: Math.round((ndviValue * 6.5 + Math.random() * 2) * 10) / 10 },
-                  { year: new Date().getFullYear() - 2, value: Math.round((ndviValue * 7 + Math.random() * 2) * 10) / 10 },
-                  { year: new Date().getFullYear() - 1, value: Math.round((ndviValue * 7.5 + Math.random() * 2) * 10) / 10 },
-                  { year: new Date().getFullYear(), value: Math.round((ndviValue * 8 + Math.random() * 2) * 10) / 10 }
-                ]
-              };
             }
             
             setField(parsedField);
@@ -103,6 +80,34 @@ const FieldDetails = () => {
     }
   };
 
+  const refreshYieldPrediction = async () => {
+    try {
+      if (!field) {
+        toast.error('Field data is missing');
+        return;
+      }
+      
+      setYieldLoading(true);
+      
+      const yieldPrediction = await fetchYieldPrediction(field);
+      
+      if (yieldPrediction) {
+        const updatedField: Field = {
+          ...field,
+          yieldPrediction,
+        };
+        
+        setField(updatedField);
+        await saveFieldData(updatedField);
+      }
+    } catch (error) {
+      console.error('Error fetching yield prediction:', error);
+      toast.error('Failed to update yield prediction');
+    } finally {
+      setYieldLoading(false);
+    }
+  };
+
   useEffect(() => {
     const autoFetchWeather = async () => {
       if (field && field.polygon && !field.weatherData && activeTab === 'weather') {
@@ -111,6 +116,16 @@ const FieldDetails = () => {
     };
     
     autoFetchWeather();
+  }, [field, activeTab]);
+
+  useEffect(() => {
+    const autoFetchYieldData = async () => {
+      if (field && field.polygon && (!field.yieldPrediction || !field.yieldPrediction.accuracy) && activeTab === 'yield') {
+        await refreshYieldPrediction();
+      }
+    };
+    
+    autoFetchYieldData();
   }, [field, activeTab]);
 
   if (loading || !field) {
@@ -372,22 +387,47 @@ const FieldDetails = () => {
         <TabsContent value="yield" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Yield Prediction</CardTitle>
+              <CardTitle className="flex justify-between items-center">
+                <span>Yield Prediction</span>
+                <Button 
+                  size="sm" 
+                  onClick={refreshYieldPrediction}
+                  disabled={yieldLoading}
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  {yieldLoading ? 'Analyzing...' : 'Refresh Analysis'}
+                </Button>
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div className="p-4 bg-white rounded-lg shadow">
-                    <h3 className="text-lg font-semibold mb-2">Crop Information</h3>
                     <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold mb-2">Crop Information</h3>
+                      {field.yieldPrediction?.accuracy && (
+                        <div className="bg-green-50 text-green-700 text-xs font-medium px-2 py-1 rounded-full">
+                          {Math.round(field.yieldPrediction.accuracy * 100)}% Accuracy
+                        </div>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 mt-2">
                       <div>
-                        <span className="text-gray-500">Crop Type:</span>
-                        <span className="ml-2 font-medium">{field.yieldPrediction?.cropType || 'Unknown'}</span>
+                        <span className="text-gray-500 text-sm">Crop Type:</span>
+                        <p className="font-medium">{field.yieldPrediction?.cropType || 'Unknown'}</p>
                       </div>
                       <div>
-                        <span className="text-gray-500">Field Area:</span>
-                        <span className="ml-2 font-medium">{field.area.toFixed(2)} ha</span>
+                        <span className="text-gray-500 text-sm">Field Area:</span>
+                        <p className="font-medium">{field.area.toFixed(2)} ha</p>
                       </div>
+                      {field.yieldPrediction?.lastUpdated && (
+                        <div className="col-span-2">
+                          <span className="text-gray-500 text-sm">Last Analysis:</span>
+                          <p className="text-xs text-gray-500">
+                            {new Date(field.yieldPrediction.lastUpdated).toLocaleString()}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -431,11 +471,17 @@ const FieldDetails = () => {
                         <p className="text-2xl font-bold text-green-600">
                           {((field.yieldPrediction?.currentYield || 0) * field.area).toFixed(1)} t
                         </p>
+                        <p className="text-xs text-gray-500">
+                          estimated total harvest
+                        </p>
                       </div>
                       <div className="bg-gray-50 p-3 rounded-lg text-center">
                         <p className="text-sm text-gray-500">Potential Total</p>
                         <p className="text-2xl font-bold text-blue-600">
                           {((field.yieldPrediction?.potentialYield || 0) * field.area).toFixed(1)} t
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          with optimal management
                         </p>
                       </div>
                     </div>
@@ -466,7 +512,13 @@ const FieldDetails = () => {
                   </div>
 
                   <div className="bg-white p-4 rounded-lg shadow">
-                    <h3 className="text-lg font-semibold mb-3">Recommendations</h3>
+                    <h3 className="text-lg font-semibold mb-3">Analysis & Recommendations</h3>
+                    <p className="text-sm text-gray-700 mb-4">
+                      Based on NDVI value of <span className="font-medium">{field.ndvi?.toFixed(2) || 'N/A'}</span> and
+                      soil moisture of <span className="font-medium">{field.soilMoisture?.toFixed(1) || 'N/A'}%</span>,
+                      the current yield gap of <span className="font-medium text-amber-600">{field.yieldPrediction?.yieldGap.toFixed(1) || '0.0'} t/ha</span> could
+                      be addressed through:
+                    </p>
                     <ul className="space-y-2">
                       {field.yieldPrediction?.recommendations?.map((rec, index) => (
                         <li key={index} className="flex items-start gap-2">
@@ -476,6 +528,9 @@ const FieldDetails = () => {
                           <p className="text-gray-700">{rec}</p>
                         </li>
                       ))}
+                      {(!field.yieldPrediction?.recommendations || field.yieldPrediction.recommendations.length === 0) && (
+                        <li className="text-gray-500">No recommendations available. Try refreshing the analysis.</li>
+                      )}
                     </ul>
                   </div>
                 </div>

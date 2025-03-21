@@ -47,5 +47,7 @@ export interface Field {
     }[];
     recommendations?: string[];
     cropType?: string;
+    accuracy?: number;
+    lastUpdated?: string;
   };
 }

@@ -44,6 +44,7 @@ export const fetchWeatherData = async (lat: number, lng: number) => {
   try {
     const toastId = toast.loading('Fetching weather data...', {
       id: 'fetch-weather-data',
+      duration: 10000, // Auto dismiss after 10 seconds if API takes too long
     });
     
     const response = await fetch(
@@ -54,6 +55,7 @@ export const fetchWeatherData = async (lat: number, lng: number) => {
       const errorData = await response.json();
       toast.error(`Weather API error: ${errorData.message || response.statusText}`, {
         id: 'fetch-weather-data',
+        duration: 3000,
       });
       throw new Error(errorData.message || 'Weather API request failed');
     }

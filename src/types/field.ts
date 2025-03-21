@@ -37,4 +37,15 @@ export interface Field {
     name?: string;
     [key: string]: any;
   };
+  yieldPrediction?: {
+    currentYield: number;
+    potentialYield: number;
+    yieldGap: number; 
+    yieldHistory?: {
+      year: number;
+      value: number;
+    }[];
+    recommendations?: string[];
+    cropType?: string;
+  };
 }

@@ -35,6 +35,7 @@ export const fetchRemoteSensingData = async (
     if (showToast) {
       toastId = toast.loading('Fetching real NDVI and soil moisture data...', {
         id: 'fetch-remote-sensing-data',
+        duration: 10000, // Auto-dismiss after 10 seconds if not explicitly dismissed
       });
     }
     
@@ -69,6 +70,7 @@ export const fetchRemoteSensingData = async (
       if (showToast) {
         toast.error(`API error: ${response.status} ${response.statusText}`, {
           id: 'fetch-remote-sensing-data',
+          duration: 3000,
         });
       }
       throw new Error(`API error: ${response.status} ${response.statusText}`);

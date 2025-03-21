@@ -1,4 +1,3 @@
-
 import "mapbox-gl/dist/mapbox-gl.css";
 
 import React, { useEffect, useState } from 'react';
@@ -7,9 +6,9 @@ import { Field } from '../types/field';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Leaf, Droplets, Sun, Thermometer, Wind, Cloud, CloudRain, MapPin } from 'lucide-react';
+import { ArrowLeft, Leaf, Droplets, Sun, Thermometer, Wind, Cloud, CloudRain, MapPin, TrendingUp, LineChart as LineChartIcon } from 'lucide-react';
 import { getColorForNDVI, getSoilMoistureCategory, generateHistoricalData } from '@/lib/utils';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { toast } from "sonner";
 import { saveFieldData, fetchWeatherData } from '@/lib/supabaseClient';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -38,6 +37,31 @@ const FieldDetails = () => {
               parsedField.soilMoistureHistory = generateHistoricalData(parsedField, 'soilMoisture');
             }
             
+            if (!parsedField.yieldPrediction) {
+              const ndviValue = parsedField.ndvi || 0.5;
+              const soilMoistureValue = parsedField.soilMoisture || 30;
+              
+              parsedField.yieldPrediction = {
+                currentYield: Math.round((ndviValue * 8 + soilMoistureValue / 10) * 0.8 * 10) / 10,
+                potentialYield: Math.round((ndviValue * 8 + soilMoistureValue / 10) * 1.2 * 10) / 10,
+                yieldGap: Math.round((ndviValue * 8 + soilMoistureValue / 10) * 0.4 * 10) / 10,
+                cropType: ['Wheat', 'Corn', 'Soybean', 'Rice'][Math.floor(Math.random() * 4)],
+                recommendations: [
+                  'Optimize irrigation schedule based on soil moisture data',
+                  'Apply nitrogen fertilizer to reach potential yield',
+                  'Monitor for potential pest issues in high-density areas',
+                  'Consider variable rate application in low NDVI zones'
+                ],
+                yieldHistory: [
+                  { year: new Date().getFullYear() - 4, value: Math.round((ndviValue * 6 + Math.random() * 2) * 10) / 10 },
+                  { year: new Date().getFullYear() - 3, value: Math.round((ndviValue * 6.5 + Math.random() * 2) * 10) / 10 },
+                  { year: new Date().getFullYear() - 2, value: Math.round((ndviValue * 7 + Math.random() * 2) * 10) / 10 },
+                  { year: new Date().getFullYear() - 1, value: Math.round((ndviValue * 7.5 + Math.random() * 2) * 10) / 10 },
+                  { year: new Date().getFullYear(), value: Math.round((ndviValue * 8 + Math.random() * 2) * 10) / 10 }
+                ]
+              };
+            }
+            
             setField(parsedField);
             await saveFieldData(parsedField);
           }
@@ -63,7 +87,6 @@ const FieldDetails = () => {
       const center = turf.center(field.polygon);
       const [lng, lat] = center.geometry.coordinates;
       
-      toast.loading('Fetching weather data...');
       const weatherData = await fetchWeatherData(lat, lng);
       
       const updatedField: Field = {
@@ -75,12 +98,8 @@ const FieldDetails = () => {
       setField(updatedField);
       
       await saveFieldData(updatedField);
-      
-      toast.success('Weather data updated');
-      
     } catch (error) {
       console.error('Error fetching weather data:', error);
-      toast.error(`Failed to fetch weather data: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -114,7 +133,7 @@ const FieldDetails = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="ndvi">
             <Leaf className="mr-2 h-4 w-4" /> NDVI Analysis
           </TabsTrigger>
@@ -123,6 +142,9 @@ const FieldDetails = () => {
           </TabsTrigger>
           <TabsTrigger value="soil">
             <Droplets className="mr-2 h-4 w-4" /> Soil Moisture
+          </TabsTrigger>
+          <TabsTrigger value="yield">
+            <TrendingUp className="mr-2 h-4 w-4" /> Yield Prediction
           </TabsTrigger>
         </TabsList>
 
@@ -340,6 +362,121 @@ const FieldDetails = () => {
                       displayMode="soil" 
                       singleField={field} 
                     />
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="yield" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Yield Prediction</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="p-4 bg-white rounded-lg shadow">
+                    <h3 className="text-lg font-semibold mb-2">Crop Information</h3>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-gray-500">Crop Type:</span>
+                        <span className="ml-2 font-medium">{field.yieldPrediction?.cropType || 'Unknown'}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Field Area:</span>
+                        <span className="ml-2 font-medium">{field.area.toFixed(2)} ha</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <h3 className="text-sm font-semibold text-gray-500">Current Yield</h3>
+                        <p className="text-3xl font-bold text-green-600">
+                          {field.yieldPrediction?.currentYield.toFixed(1) || '0.0'} 
+                          <span className="text-sm font-normal text-gray-500 ml-1">t/ha</span>
+                        </p>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <h3 className="text-sm font-semibold text-gray-500">Potential Yield</h3>
+                        <p className="text-3xl font-bold text-blue-600">
+                          {field.yieldPrediction?.potentialYield.toFixed(1) || '0.0'}
+                          <span className="text-sm font-normal text-gray-500 ml-1">t/ha</span>
+                        </p>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <h3 className="text-sm font-semibold text-gray-500">Yield Gap</h3>
+                        <p className="text-3xl font-bold text-amber-600">
+                          {field.yieldPrediction?.yieldGap.toFixed(1) || '0.0'}
+                          <span className="text-sm font-normal text-gray-500 ml-1">t/ha</span>
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  <div className="bg-white p-4 rounded-lg shadow">
+                    <h3 className="text-lg font-semibold mb-4">Total Field Yield</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-gray-50 p-3 rounded-lg text-center">
+                        <p className="text-sm text-gray-500">Current Total</p>
+                        <p className="text-2xl font-bold text-green-600">
+                          {((field.yieldPrediction?.currentYield || 0) * field.area).toFixed(1)} t
+                        </p>
+                      </div>
+                      <div className="bg-gray-50 p-3 rounded-lg text-center">
+                        <p className="text-sm text-gray-500">Potential Total</p>
+                        <p className="text-2xl font-bold text-blue-600">
+                          {((field.yieldPrediction?.potentialYield || 0) * field.area).toFixed(1)} t
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="bg-white p-4 rounded-lg shadow">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold">Yield History</h3>
+                      <LineChartIcon className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <div className="h-64">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart 
+                          data={field.yieldPrediction?.yieldHistory || []}
+                          margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="year" />
+                          <YAxis />
+                          <Tooltip />
+                          <Legend />
+                          <Bar dataKey="value" name="Yield (t/ha)" fill="#10b981" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-4 rounded-lg shadow">
+                    <h3 className="text-lg font-semibold mb-3">Recommendations</h3>
+                    <ul className="space-y-2">
+                      {field.yieldPrediction?.recommendations?.map((rec, index) => (
+                        <li key={index} className="flex items-start gap-2">
+                          <div className="flex-shrink-0 w-5 h-5 rounded-full bg-green-100 flex items-center justify-center mt-0.5">
+                            <span className="text-green-600 text-xs font-bold">{index + 1}</span>
+                          </div>
+                          <p className="text-gray-700">{rec}</p>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 </div>
               </div>

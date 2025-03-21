@@ -7,9 +7,9 @@ const AGRO_MONITOR_API = "https://api.agromonitoring.com/agro/1.0/yield";
 const ONEFARM_API = "https://api.onefarm.io/v1/yield-predictions";
 
 // API keys (in production, these would be stored in environment variables)
-const NASA_HARVEST_API_KEY = process.env.NASA_HARVEST_API_KEY || "demo-key-nasa";
-const AGRO_MONITOR_API_KEY = process.env.AGRO_MONITOR_API_KEY || "demo-key-agro";
-const ONEFARM_API_KEY = process.env.ONEFARM_API_KEY || "demo-key-onefarm";
+const NASA_HARVEST_API_KEY = import.meta.env.VITE_NASA_HARVEST_API_KEY || "demo-key-nasa";
+const AGRO_MONITOR_API_KEY = import.meta.env.VITE_AGRO_MONITOR_API_KEY || "demo-key-agro";
+const ONEFARM_API_KEY = import.meta.env.VITE_ONEFARM_API_KEY || "demo-key-onefarm";
 
 /**
  * Fetches accurate yield prediction data for a given field from real agricultural APIs

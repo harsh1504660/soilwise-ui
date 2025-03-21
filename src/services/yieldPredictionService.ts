@@ -24,7 +24,8 @@ export const fetchYieldPrediction = async (
     }
 
     // Extract field coordinates from polygon
-    const coordinates = field.polygon.geometry.coordinates[0];
+    // Fixed: Use type assertion to handle potential GeoJSON type variations
+    const coordinates = (field.polygon.geometry as any).coordinates[0];
     
     // Extract field data for prediction
     const requestData = {
@@ -108,10 +109,11 @@ const calculateYield = (ndvi: number, soilMoisture: number): number => {
   // Soil moisture factor (optimal around 35-50%)
   const moistureFactor = 1 - Math.abs((soilMoisture - 40) / 100);
   
-  const yield = baseYield + (ndviFactor * moistureFactor * 2);
+  // Fixed: Renamed "yield" to "cropYield" as "yield" is a reserved word
+  const cropYield = baseYield + (ndviFactor * moistureFactor * 2);
   
   // Round to 1 decimal place for display
-  return Math.round(yield * 10) / 10;
+  return Math.round(cropYield * 10) / 10;
 };
 
 // Calculate potential yield if all conditions were optimal

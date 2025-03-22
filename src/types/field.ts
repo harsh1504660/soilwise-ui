@@ -49,6 +49,22 @@ export interface Field {
     cropType?: string;
     accuracy?: number;
     lastUpdated?: string;
-    dataSource?: string; // Added the dataSource property
+    dataSource?: string;
+    earthEngineData?: {
+      ndviTimeSeries?: {
+        date: string;
+        value: number;
+      }[];
+      precipitationData?: {
+        date: string;
+        value: number;
+      }[];
+      temperatureData?: {
+        date: string;
+        value: number;
+      }[];
+      eviValue?: number;
+      modelVersion?: string;
+    };
   };
 }
